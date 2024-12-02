@@ -4,7 +4,6 @@
 #include <random>
 #include <sstream>
 
-#include <booster/robot/common/robot_mode.hpp>
 #include <booster/robot/b1/b1_api_const.hpp>
 #include <booster/robot/b1/b1_loco_api.hpp>
 
