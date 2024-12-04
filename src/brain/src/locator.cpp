@@ -13,19 +13,19 @@ void Locator::init(FieldDimensions fd, int minMarkerCntParam, double residualTol
 
 void Locator::calcFieldMarkers(FieldDimensions fd)
 {
-    // 中线上的 X 标志
+    // The X mark on the center line.
     fieldMarkers.push_back(FieldMarker{'X', 0.0, -fd.circleRadius});
     fieldMarkers.push_back(FieldMarker{'X', 0.0, fd.circleRadius});
 
-    // 罚球点
+    // Penalty spot
     fieldMarkers.push_back(FieldMarker{'P', fd.length / 2 - fd.penaltyDist, 0.0});
     fieldMarkers.push_back(FieldMarker{'P', -fd.length / 2 + fd.penaltyDist, 0.0});
 
-    // 边线中心
+    // Center of the sideline
     fieldMarkers.push_back(FieldMarker{'T', 0.0, fd.width / 2});
     fieldMarkers.push_back(FieldMarker{'T', 0.0, -fd.width / 2});
 
-    // 禁区
+    // Penalty area
     fieldMarkers.push_back(FieldMarker{'L', (fd.length / 2 - fd.penaltyAreaLength), fd.penaltyAreaWidth / 2});
     fieldMarkers.push_back(FieldMarker{'L', (fd.length / 2 - fd.penaltyAreaLength), -fd.penaltyAreaWidth / 2});
     fieldMarkers.push_back(FieldMarker{'L', -(fd.length / 2 - fd.penaltyAreaLength), fd.penaltyAreaWidth / 2});
@@ -35,7 +35,7 @@ void Locator::calcFieldMarkers(FieldDimensions fd)
     fieldMarkers.push_back(FieldMarker{'T', -fd.length / 2, fd.penaltyAreaWidth / 2});
     fieldMarkers.push_back(FieldMarker{'T', -fd.length / 2, -fd.penaltyAreaWidth / 2});
 
-    // 球门区
+    // Goal area
     fieldMarkers.push_back(FieldMarker{'L', (fd.length / 2 - fd.goalAreaLength), fd.goalAreaWidth / 2});
     fieldMarkers.push_back(FieldMarker{'L', (fd.length / 2 - fd.goalAreaLength), -fd.goalAreaWidth / 2});
     fieldMarkers.push_back(FieldMarker{'L', -(fd.length / 2 - fd.goalAreaLength), fd.goalAreaWidth / 2});
@@ -45,7 +45,7 @@ void Locator::calcFieldMarkers(FieldDimensions fd)
     fieldMarkers.push_back(FieldMarker{'T', -fd.length / 2, fd.goalAreaWidth / 2});
     fieldMarkers.push_back(FieldMarker{'T', -fd.length / 2, -fd.goalAreaWidth / 2});
 
-    // 场地四角
+    // Four corners of the field
     fieldMarkers.push_back(FieldMarker{'L', fd.length / 2, fd.width / 2});
     fieldMarkers.push_back(FieldMarker{'L', fd.length / 2, -fd.width / 2});
     fieldMarkers.push_back(FieldMarker{'L', -fd.length / 2, fd.width / 2});
@@ -95,7 +95,6 @@ int Locator::genParticles()
     hypos.setZero();
     Eigen::ArrayXd rands = (Eigen::ArrayXd::Random(num) + 1) / 2;
 
-    // 根据概率决定新 particle 采样的基准
     for (int i = 0; i < rands.size(); i++)
     {
         double rand = rands(i);
@@ -108,7 +107,6 @@ int Locator::genParticles()
         hypos.row(i).head(3) = old_hypos.row(j).head(3);
     }
 
-    // 为基准加入噪音
     offsetX *= offsetShrinkRatio;
     offsetY *= offsetShrinkRatio;
     offsetTheta *= offsetShrinkRatio;
@@ -118,7 +116,6 @@ int Locator::genParticles()
     offsets.col(2) *= offsetTheta;
     hypos.leftCols(3) += offsets;
 
-    // 限制在 constraints 之内
     hypos.col(0) = hypos.col(0).cwiseMax(constraints.xmin).cwiseMin(constraints.xmax);
     hypos.col(1) = hypos.col(1).cwiseMax(constraints.ymin).cwiseMin(constraints.ymax);
     hypos.col(2) = hypos.col(2).cwiseMax(constraints.thetamin).cwiseMin(constraints.thetamax);
@@ -137,7 +134,6 @@ double Locator::minDist(FieldMarker marker)
         {
             continue;
         }
-        // else 类型相同
         dist = sqrt(pow((target.x - marker.x), 2.0) + pow((target.y - marker.y), 2.0));
         if (dist < minDist)
             minDist = dist;
@@ -157,7 +153,6 @@ vector<double> Locator::getOffset(FieldMarker marker)
         {
             continue;
         }
-        // else 类型相同
         dist = sqrt(pow((target.x - marker.x), 2.0) + pow((target.y - marker.y), 2.0));
         if (dist < minDist)
         {
@@ -179,8 +174,7 @@ double Locator::residual(vector<FieldMarker> markers_r, Pose2D pose)
         double dist = max(norm(marker_r.x, marker_r.y), 0.1);
         auto marker_f = markerToFieldFrame(marker_r, pose);
         double conf = max(marker_r.confidence, 0.1);
-        res += minDist(marker_f) * conf / 100.0 / dist * 3; // 加权
-        // res += minDist(marker_f); // 不加权
+        res += minDist(marker_f) * conf / 100.0 / dist * 3;
     }
 
     return res;
@@ -212,7 +206,7 @@ int Locator::calcProbs(vector<FieldMarker> markers_r)
 {
     int rows = hypos.rows();
     if (rows < 1)
-        return 1; // 防止出现无法计算标准差的情况
+        return 1;
 
     for (int i = 0; i < rows; i++)
     {
@@ -227,10 +221,10 @@ int Locator::calcProbs(vector<FieldMarker> markers_r)
         }
     }
 
-    double mean = hypos.col(3).mean();                      // 计算平均值
-    double sqSum = ((hypos.col(3) - mean).square().sum());  // 计算平方和
-    double sigma = std::sqrt(sqSum / (rows - 1));           // 计算标准差
-    double mu = hypos.col(3).minCoeff() - muOffset * sigma; // 概率密度分布假设的均值
+    double mean = hypos.col(3).mean();
+    double sqSum = ((hypos.col(3) - mean).square().sum());
+    double sigma = std::sqrt(sqSum / (rows - 1));
+    double mu = hypos.col(3).minCoeff() - muOffset * sigma;
 
     for (int i = 0; i < rows; i++)
     {
@@ -239,11 +233,10 @@ int Locator::calcProbs(vector<FieldMarker> markers_r)
 
     double probSum = hypos.col(4).sum();
     if (fabs(probSum) < 1e-5)
-        return 1; // 所有的概率都接近 0
+        return 1;
 
-    hypos.col(4) = hypos.col(4) / probSum; // 归一化
+    hypos.col(4) = hypos.col(4) / probSum;
 
-    // 计算累计概率(从行0到本行的概率之和), 以方便下一次采样
     double acc = 0;
     for (int i = 0; i < rows; i++)
     {
@@ -257,16 +250,13 @@ int Locator::calcProbs(vector<FieldMarker> markers_r)
 bool Locator::isConverged()
 {
     return (
-        (hypos.col(0).maxCoeff() - hypos.col(0).minCoeff() < convergeTolerance)    // x
-        && (hypos.col(1).maxCoeff() - hypos.col(1).minCoeff() < convergeTolerance) // y
-        && (hypos.col(2).maxCoeff() - hypos.col(2).minCoeff() < convergeTolerance) // theta TODO: 考虑为 theta
-    );
+        (hypos.col(0).maxCoeff() - hypos.col(0).minCoeff() < convergeTolerance) && (hypos.col(1).maxCoeff() - hypos.col(1).minCoeff() < convergeTolerance) && (hypos.col(2).maxCoeff() - hypos.col(2).minCoeff() < convergeTolerance));
 }
 
 int Locator::locateRobot(vector<FieldMarker> markers_r, PoseBox2D constraintsParam, Pose2D &pose, double &avgResidual, int numParticles, double offsetXParam, double offsetYParam, double offsetThetaParam)
 {
     if (markers_r.size() < minMarkerCnt)
-        return 4; // Marker 的数量不够
+        return 4;
 
     bestResidual = std::numeric_limits<double>::infinity();
     bestPose = Pose2D{0.0, 0.0, 0.0};
@@ -278,34 +268,30 @@ int Locator::locateRobot(vector<FieldMarker> markers_r, PoseBox2D constraintsPar
 
     genInitialParticles(numParticles);
     if (calcProbs(markers_r))
-        return 5; // 所有概率均过低
+        return 5;
 
     for (int i = 0; i < maxIteration; i++)
     {
         if (isConverged())
         {
-            // 检查残差是否合理
+
             avgResidual = bestResidual / markers_r.size();
             if (avgResidual > residualTolerance)
-                return 2; // 收敛后的残差过大
+                return 2;
 
-            // else 残差合理, 定位成功
-            // pose = finalAdjust(markers_r, bestPose);
             pose = bestPose;
             pose.theta = toPInPI(pose.theta);
             return 0;
         }
 
-        // 未收敛
         if (genParticles())
-            return 1; // 生成粒子失败
+            return 1;
 
         if (calcProbs(markers_r))
-            return 5; // 所有概率均过低
+            return 5;
     }
 
-    // 达到最大迭代次数, 未收敛
-    return 3; // 未收敛
+    return 3;
 }
 
 LocateResult Locator::locateRobot(vector<FieldMarker> markers_r, PoseBox2D constraintsParam, int numParticles, double offsetXParam, double offsetYParam, double offsetThetaParam)
@@ -313,7 +299,7 @@ LocateResult Locator::locateRobot(vector<FieldMarker> markers_r, PoseBox2D const
     auto start_time = chr::high_resolution_clock::now();
     LocateResult res;
     if (markers_r.size() < minMarkerCnt)
-    { // Marker 的数量不够
+    {
         res.success = false;
         res.code = 4;
         res.msecs = msecsSince(start_time);
@@ -330,7 +316,7 @@ LocateResult Locator::locateRobot(vector<FieldMarker> markers_r, PoseBox2D const
 
     genInitialParticles(numParticles);
     if (calcProbs(markers_r))
-    { // 所有概率均过低
+    {
         res.success = false;
         res.code = 5;
         res.msecs = msecsSince(start_time);
@@ -341,17 +327,16 @@ LocateResult Locator::locateRobot(vector<FieldMarker> markers_r, PoseBox2D const
     {
         if (isConverged())
         {
-            // 检查残差是否合理
+
             res.residual = bestResidual / markers_r.size();
             if (res.residual > residualTolerance)
-            { // 收敛后的残差过大
+            {
                 res.success = false;
                 res.code = 2;
                 res.msecs = msecsSince(start_time);
                 return res;
             }
-            // else 残差合理, 定位成功
-            // pose = finalAdjust(markers_r, bestPose);
+
             res.success = true;
             res.code = 0;
             res.pose = bestPose;
@@ -360,9 +345,8 @@ LocateResult Locator::locateRobot(vector<FieldMarker> markers_r, PoseBox2D const
             return res;
         }
 
-        // 未收敛
         if (genParticles())
-        { // 生成粒子失败
+        {
             res.success = false;
             res.code = 1;
             res.msecs = msecsSince(start_time);
@@ -370,7 +354,7 @@ LocateResult Locator::locateRobot(vector<FieldMarker> markers_r, PoseBox2D const
         }
 
         if (calcProbs(markers_r))
-        { // 所有概率均过低
+        {
             res.success = false;
             res.code = 5;
             res.msecs = msecsSince(start_time);
@@ -378,9 +362,8 @@ LocateResult Locator::locateRobot(vector<FieldMarker> markers_r, PoseBox2D const
         }
     }
 
-    // 达到最大迭代次数, 未收敛
     res.success = false;
     res.code = 3;
     res.msecs = msecsSince(start_time);
-    return res; // 未收敛
+    return res;
 }

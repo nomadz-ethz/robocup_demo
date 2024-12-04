@@ -5,7 +5,7 @@
 #include <random>
 #include <sstream>
 
-// 计算从 start_time 开始到现在, 经过了多少毫秒
+// Calculate how many milliseconds have passed since start_time
 inline int msecsSince(std::chrono::high_resolution_clock::time_point start_time)
 {
     auto now = std::chrono::high_resolution_clock::now();

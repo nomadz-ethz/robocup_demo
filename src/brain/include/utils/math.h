@@ -6,50 +6,51 @@
 
 using namespace std;
 
-// 角度转弧度
+// degrees to radians
 inline double deg2rad(double deg)
 {
     return deg / 180.0 * M_PI;
 }
 
-// 弧度转角度
+// radians to degrees
 inline double rad2deg(double rad)
 {
     return rad / M_PI * 180.0;
 }
 
-// 算术平均值
+// arithmetic mean
 inline double mean(double x, double y)
 {
     return (x + y) / 2;
 }
 
-// 把数字截断到一个范围内
+// truncate the number to a range
 inline double cap(double x, double upper_limit, double lower_limit)
 {
     return max(min(x, upper_limit), lower_limit);
 }
 
-// 计算L2范数 (两个数的平方和开根号)
+// Calculate the L2 norm (the square root of the sum of the squares of two numbers).
 inline double norm(double x, double y)
 {
     return sqrt(x * x + y * y);
 }
 
-// 计算L2范数 (两个数的平方和开根号)
+// Calculate the L2 norm (the square root of the sum of the squares of two numbers).
 inline double norm(vector<double> v)
 {
     return sqrt(v[0] * v[0] + v[1] * v[1]);
 }
 
-// 把一个角度换算到 [-M_PI, M_PI) 区间.
+// Convert an angle to the range of [-M_PI, M_PI).
 inline double toPInPI(double theta)
 {
     int n = static_cast<int>(fabs(theta / 2 / M_PI)) + 1;
     return fmod(theta + M_PI + 2 * n * M_PI, 2 * M_PI) - M_PI;
 }
 
-// 在任意直角坐标系中, 计算一个向量 v 与 x 轴的夹角 theta (rad), 取值范围: (-M_PI, M_PI)
+// In any Cartesian coordinate system, calculate the angle θ (in radians) between a vector v 
+// and the x-axis, with the range (-M_PI, M_PI).
 inline double thetaToX(vector<double> v)
 {
     vector<double> x = {1, 0};
@@ -57,7 +58,8 @@ inline double thetaToX(vector<double> v)
     return toPInPI(ang);
 }
 
-// 将一个平面坐标系 0 中的坐标, 转到坐标系 1 中, 坐标系 1 相对于 0 旋转 theta 角
+// Transform a point from coordinate system 0 to coordinate system 1, where coordinate system 1 
+// is rotated by an angle θ relative to coordinate system 0.
 inline Point2D transform(Point2D p0, double theta)
 {
     Point2D p1;
@@ -67,12 +69,14 @@ inline Point2D transform(Point2D p0, double theta)
 }
 
 /**
- * @brief 将一个 source 坐标系(s) 中的 Pose (xs, ys, thetax) 转换到 target 坐标系(t)中 (xt, yt, thetat)
+ * @brief Transform a Pose (xs, ys, thetas) from source coordinate system (s) to target coordinate system (t).
+ *        The source coordinate system's origin (xst, yst, thetast) is represented in the target coordinate system.
  *
- * @param xs, ys, thetas source 坐标系中一个 Pose 位置和朝向, theta 为弧度
- * @param xst, yst, thetast source 坐标系原点在 target 坐标系中的位置和朝向(st), theta 为弧度
- * @param xt, yt, thetat 输出该 Pose 在 target 坐标系中的位置和朝向, theta 为弧度
+ * @param xs, ys, thetas Pose (position and orientation) in the source coordinate system (s), with theta in radians.
+ * @param xst, yst, thetast Position and orientation of the source coordinate system's origin in the target coordinate system (t), with theta in radians.
+ * @param xt, yt, thetat Output the Pose (position and orientation) in the target coordinate system (t), with theta in radians.
  */
+
 inline void transCoord(const double &xs, const double &ys, const double &thetas, const double &xst, const double &yst, const double &thetast, double &xt, double &yt, double &thetat)
 {
     thetat = toPInPI(thetas + thetast);

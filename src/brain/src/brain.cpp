@@ -10,9 +10,7 @@ using std::placeholders::_1;
 
 Brain::Brain() : rclcpp::Node("brain_node")
 {
-    // 要注意参数必须先在这里声明，否则程序里也读不到
-    // 配置在 yaml 文件中的参数，如果有层级结构，用点分号来获取
-
+    // Note that the parameters must be declared here first, otherwise they cannot be read in the program either.
     declare_parameter<int>("game.team_id", 0);
     declare_parameter<int>("game.player_id", 29);
     declare_parameter<string>("game.field_type", "");
@@ -29,13 +27,13 @@ Brain::Brain() : rclcpp::Node("brain_node")
     declare_parameter<string>("rerunLog.server_addr", "");
     declare_parameter<int>("rerunLog.img_interval", 10);
 
-    // tree_file_path 在 launch.py 中配置的，没有放在 config.yaml 中
+    // The tree_file_path is configured in launch.py and not placed in config.yaml.
     declare_parameter<string>("tree_file_path", "");
 }
 
 void Brain::init()
 {
-    // 一定要先加载配置，之后 config 才能使用
+    // Make sure to load the configuration first, and then the config can be used.
     config = std::make_shared<BrainConfig>();
     loadConfig();
 
@@ -46,21 +44,16 @@ void Brain::init()
     tree = std::make_shared<BrainTree>(this);
     client = std::make_shared<RobotClient>(this);
 
-    // 初始化粒子滤波定位器
     locator->init(config->fieldDimensions, 4, 0.5);
 
-    // 构建 BehaviorTree
     tree->init();
 
-    // 初始化 client
     client->init();
 
     log->prepare();
-    // 初始化上次定位成功的时间. 这个时间用于估计定位时里程计的最大漂移量
 
     data->lastSuccessfulLocalizeTime = get_clock()->now();
 
-    // 创建各个 subscription
     joySubscription = create_subscription<sensor_msgs::msg::Joy>("/joy", 10, bind(&Brain::joystickCallback, this, _1));
     gameControlSubscription = create_subscription<game_controller_interface::msg::GameControlData>("/robocup/game_controller", 1, bind(&Brain::gameControlCallback, this, _1));
     detectionsSubscription = create_subscription<vision_interface::msg::Detections>("/booster_vision/detection", 1, bind(&Brain::detectionsCallback, this, _1));
@@ -89,17 +82,17 @@ void Brain::loadConfig()
 
     get_parameter("tree_file_path", config->treeFilePath);
 
-    // 参数非法会直接抛异常导致程序结束运行
+    // handle the parameters
     config->handle();
 
-    // 加载完参数，打印
+    // debug after handle the parameters
     ostringstream oss;
     config->print(oss);
     prtDebug(oss.str());
 }
 
 /**
- * 会被循环调用的 tick 函数
+ * will be called in the Ros2 loop
  */
 void Brain::tick()
 {
@@ -111,7 +104,6 @@ void Brain::updateMemory()
 {
     updateBallMemory();
 
-    // 处理对方 kickoff 时, 我方的等待逻辑
     static Point ballPos;
     static rclcpp::Time kickOffTime;
     if (
@@ -141,8 +133,7 @@ void Brain::updateBallMemory()
     transCoord(
         data->ball.posToField.x, data->ball.posToField.y, 0,
         xfr, yfr, thetafr,
-        data->ball.posToRobot.x, data->ball.posToRobot.y, data->ball.posToRobot.z // 注意, z 没有在其它地方使用, 这里仅为参数点位使用
-    );
+        data->ball.posToRobot.x, data->ball.posToRobot.y, data->ball.posToRobot.z);
 
     data->ball.range = sqrt(data->ball.posToRobot.x * data->ball.posToRobot.x + data->ball.posToRobot.y * data->ball.posToRobot.y);
     tree->setEntry<double>("ball_range", data->ball.range);
@@ -151,7 +142,7 @@ void Brain::updateBallMemory()
 
     // mark ball as lost if long time no see
     if (get_clock()->now().seconds() - data->ball.timePoint.seconds() > config->memoryLength)
-    { // 上次检测到球的时间过长, 则认为记忆中的球失效了
+    {
         tree->setEntry<bool>("ball_location_known", false);
         data->ballDetected = false;
     }
@@ -170,14 +161,12 @@ void Brain::updateBallMemory()
 
 vector<double> Brain::getGoalPostAngles(const double margin)
 {
-    double leftX, leftY, rightX, rightY; // 球门柱在球场中的坐标
-
+    double leftX, leftY, rightX, rightY;
     leftX = config->fieldDimensions.length / 2;
     leftY = config->fieldDimensions.goalWidth / 2;
     rightX = config->fieldDimensions.length / 2;
     rightY = -config->fieldDimensions.goalWidth / 2;
 
-    // 如果看到了对方球门, 则使用看到的位置, 可以抵消 odom 的误差
     for (int i = 0; i < data->goalposts.size(); i++)
     {
         auto post = data->goalposts[i];
@@ -202,31 +191,26 @@ vector<double> Brain::getGoalPostAngles(const double margin)
 
 void Brain::calibrateOdom(double x, double y, double theta)
 {
-    // TODO: 考虑时间戳问题
     double x_or, y_or, theta_or; // or = odom to robot
     x_or = -cos(data->robotPoseToOdom.theta) * data->robotPoseToOdom.x - sin(data->robotPoseToOdom.theta) * data->robotPoseToOdom.y;
     y_or = sin(data->robotPoseToOdom.theta) * data->robotPoseToOdom.x - cos(data->robotPoseToOdom.theta) * data->robotPoseToOdom.y;
     theta_or = -data->robotPoseToOdom.theta;
 
-    // 获取 odom 在 field 坐标系中的新位置
     transCoord(x_or, y_or, theta_or,
                x, y, theta,
                data->odomToField.x, data->odomToField.y, data->odomToField.theta);
 
-    // 利用新的 data->odomToField 重新计算 robotToField 的值
     transCoord(
         data->robotPoseToOdom.x, data->robotPoseToOdom.y, data->robotPoseToOdom.theta,
         data->odomToField.x, data->odomToField.y, data->odomToField.theta,
         data->robotPoseToField.x, data->robotPoseToField.y, data->robotPoseToField.theta);
 
-    // 立即在新的 odom 中更新重要的物体位置, 以防止下一次 detectcallback 之前用到的数据是错误的
     double placeHolder;
     // ball
     transCoord(
         data->ball.posToRobot.x, data->ball.posToRobot.y, 0,
         data->robotPoseToField.x, data->robotPoseToField.y, data->robotPoseToField.theta,
-        data->ball.posToField.x, data->ball.posToField.y, placeHolder // 注意,  由于物体定位没有 theta, 这里用一个 placeholder 占位
-    );
+        data->ball.posToField.x, data->ball.posToField.y, placeHolder);
 
     // opponents
     for (int i = 0; i < data->opponents.size(); i++)
@@ -235,8 +219,7 @@ void Brain::calibrateOdom(double x, double y, double theta)
         transCoord(
             obj.posToRobot.x, obj.posToRobot.y, 0,
             data->robotPoseToField.x, data->robotPoseToField.y, data->robotPoseToField.theta,
-            obj.posToField.x, obj.posToField.y, placeHolder // 注意,  由于物体定位没有 theta, 这里用一个 placeholder 占位
-        );
+            obj.posToField.x, obj.posToField.y, placeHolder);
     }
 }
 
@@ -247,7 +230,6 @@ double Brain::msecsSince(rclcpp::Time time)
 
 void Brain::joystickCallback(const sensor_msgs::msg::Joy &msg)
 {
-    // 通过手柄控制机器人
     if (msg.buttons[BTN_LT] == 0 && msg.buttons[BTN_RT] == 0 && msg.buttons[BTN_LB] == 0 && msg.buttons[BTN_RB] == 0)
     {
         if (msg.buttons[BTN_B] == 1)
@@ -263,7 +245,6 @@ void Brain::joystickCallback(const sensor_msgs::msg::Joy &msg)
     }
     else if (msg.buttons[BTN_LT] == 1)
     {
-        // 用于在线调试参数
         if (msg.axes[AX_DX] || msg.axes[AX_DY])
         {
             config->vxFactor += 0.01 * msg.axes[AX_DX];
@@ -300,30 +281,27 @@ void Brain::joystickCallback(const sensor_msgs::msg::Joy &msg)
 
 void Brain::gameControlCallback(const game_controller_interface::msg::GameControlData &msg)
 {
-    // 处理比赛的一级状态
-    auto lastGameState = tree->getEntry<string>("gc_game_state"); // 比赛的一级状态
+    auto lastGameState = tree->getEntry<string>("gc_game_state");
     vector<string> gameStateMap = {
-        "INITIAL", // 初始化状态, 球员在场外准备
-        "READY",   // 准备状态, 球员进场, 并走到自己的始发位置
-        "SET",     // 停止动作, 等待裁判机发出开始比赛的指令
-        "PLAY",    // 正常比赛
-        "END"      // 比赛结束
+        "INITIAL", // Initialization state, players are ready outside the field.
+        "READY",   // Ready state, players enter the field and walk to their starting positions.
+        "SET",     // Stop action, waiting for the referee machine to issue the instruction to start the game.
+        "PLAY",    // Normal game.
+        "END"      // The game is over.
     };
     string gameState = gameStateMap[static_cast<int>(msg.state)];
     tree->setEntry<string>("gc_game_state", gameState);
-    bool isKickOffSide = (msg.kick_off_team == config->teamId); // 我方是否是开球方
+    bool isKickOffSide = (msg.kick_off_team == config->teamId);
     tree->setEntry<bool>("gc_is_kickoff_side", isKickOffSide);
 
-    // 处理比赛的二级状态
-    string gameSubStateType = static_cast<int>(msg.secondary_state) == 0 ? "NONE" : "FREE_KICK"; // 在 PLAY 过程中的其它状态, 暂时只考虑任意球. 在此状态下时, 选手为任意球做准备, SubState 恢复 NONE 时, 重新回到 PLAY 的正常状态中.
-    vector<string> gameSubStateMap = {"STOP", "GET_READY", "SET"};                               // STOP: 停下来; -> GET_READY: 移动到进攻或防守位置; -> SET: 站住不动
+    string gameSubStateType = static_cast<int>(msg.secondary_state) == 0 ? "NONE" : "FREE_KICK";
+    vector<string> gameSubStateMap = {"STOP", "GET_READY", "SET"};
     string gameSubState = gameSubStateMap[static_cast<int>(msg.secondary_state_info[1])];
     tree->setEntry<string>("gc_game_sub_state_type", gameSubStateType);
     tree->setEntry<string>("gc_game_sub_state", gameSubState);
-    bool isSubStateKickOffSide = (static_cast<int>(msg.secondary_state_info[0]) == config->teamId); // 在二级状态下, 我方是否是开球方. 例如, 当前二级状态为任意球, 我方是否是开任意球的一方
+    bool isSubStateKickOffSide = (static_cast<int>(msg.secondary_state_info[0]) == config->teamId);
     tree->setEntry<bool>("gc_is_sub_state_kickoff_side", isSubStateKickOffSide);
 
-    // 找到队的信息
     game_controller_interface::msg::TeamInfo myTeamInfo;
     if (msg.teams[0].team_number == config->teamId)
     {
@@ -335,20 +313,18 @@ void Brain::gameControlCallback(const game_controller_interface::msg::GameContro
     }
     else
     {
-        // 数据包中没有包含我们的队，不应该再处理了
+
         prtErr("received invalid game controller message");
         return;
     }
 
-    // 处理判罚状态. penalty[playerId] 代表我方的球员是否处于判罚状态, 处理判罚状态意味着不能移动
     data->penalty[0] = static_cast<int>(myTeamInfo.players[0].penalty);
     data->penalty[1] = static_cast<int>(myTeamInfo.players[1].penalty);
     data->penalty[2] = static_cast<int>(myTeamInfo.players[2].penalty);
     data->penalty[3] = static_cast<int>(myTeamInfo.players[3].penalty);
-    double isUnderPenalty = (data->penalty[config->playerId] != 0); // 当前 robot 是否被判罚中
+    double isUnderPenalty = (data->penalty[config->playerId] != 0);
     tree->setEntry<bool>("gc_is_under_penalty", isUnderPenalty);
 
-    // FOR FUN 处理进球后的庆祝挥手的逻辑
     int curScore = static_cast<int>(myTeamInfo.score);
     if (curScore > data->lastScore)
     {
@@ -365,7 +341,6 @@ void Brain::detectionsCallback(const vision_interface::msg::Detections &msg)
 {
     auto gameObjects = getGameObjects(msg);
 
-    // 对检测到的对象进行分组
     vector<GameObject> balls, goalPosts, persons, robots, obstacles, markings;
     for (int i = 0; i < gameObjects.size(); i++)
     {
@@ -378,7 +353,6 @@ void Brain::detectionsCallback(const vision_interface::msg::Detections &msg)
         {
             persons.push_back(obj);
 
-            // 为了调试方便, 可以在 bt 的 xml 中加入 <Script code="treat_person_as_robot:=true" />, 由人来扮演对方机器人
             if (tree->getEntry<bool>("treat_person_as_robot"))
                 robots.push_back(obj);
         }
@@ -423,7 +397,7 @@ void Brain::detectionsCallback(const vision_interface::msg::Detections &msg)
         auto obj = gameObjects[i];
         auto label = obj.label;
         labels.push_back(rerun::Text(format("%s x:%.2f y:%.2f c:%.2f", obj.label.c_str(), obj.posToRobot.x, obj.posToRobot.y, obj.confidence)));
-        points.push_back(rerun::Vec2D{obj.posToField.x, -obj.posToField.y}); // y 取反是因为 rerun Viewer 的坐标系是左手系。转一下看起来更方便。
+        points.push_back(rerun::Vec2D{obj.posToField.x, -obj.posToField.y});
         points_r.push_back(rerun::Vec2D{obj.posToRobot.x, -obj.posToRobot.y});
         mins.push_back(rerun::Vec2D{obj.boundingBox.xmin, obj.boundingBox.ymin});
         sizes.push_back(rerun::Vec2D{obj.boundingBox.xmax - obj.boundingBox.xmin, obj.boundingBox.ymax - obj.boundingBox.ymin});
@@ -465,13 +439,10 @@ void Brain::odometerCallback(const booster_interface::msg::Odometer &msg)
     data->robotPoseToOdom.y = msg.y * config->robotOdomFactor;
     data->robotPoseToOdom.theta = msg.theta;
 
-    // 根据 Odom 信息, 更新机器人在 Field 坐标系中的位置
     transCoord(
         data->robotPoseToOdom.x, data->robotPoseToOdom.y, data->robotPoseToOdom.theta,
         data->odomToField.x, data->odomToField.y, data->odomToField.theta,
         data->robotPoseToField.x, data->robotPoseToField.y, data->robotPoseToField.theta);
-
-    // Log Odom 信息
 
     log->setTimeNow();
     log->log("field/robot",
@@ -507,17 +478,15 @@ void Brain::imageCallback(const sensor_msgs::msg::Image &msg)
     counter++;
     if (counter % config->rerunLogImgInterval == 0)
     {
-        // 将 ROS 图像消息转换为 OpenCV 图像
+
         cv::Mat imageBGR(msg.height, msg.width, CV_8UC3, const_cast<uint8_t *>(msg.data.data()));
         cv::Mat imageRGB;
         cv::cvtColor(imageBGR, imageRGB, cv::COLOR_BGR2RGB);
 
-        // 压缩图像
         std::vector<uint8_t> compressed_image;
-        std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 10}; // 10 表示压缩质量，可以根据需要调整
+        std::vector<int> compression_params = {cv::IMWRITE_JPEG_QUALITY, 10};
         cv::imencode(".jpg", imageRGB, compressed_image, compression_params);
 
-        // 将压缩后的图像数据传递给 rerun
         double time = msg.header.stamp.sec + static_cast<double>(msg.header.stamp.nanosec) * 1e-9;
         log->setTimeSeconds(time);
         log->log("image/img", rerun::EncodedImage::from_bytes(compressed_image));
@@ -527,7 +496,7 @@ void Brain::imageCallback(const sensor_msgs::msg::Image &msg)
 void Brain::headPoseCallback(const geometry_msgs::msg::Pose &msg)
 {
 
-    // --- for test: 测距 ---
+    // --- for test:
     // if (config->rerunLogEnable) {
     if (false)
     {
@@ -536,7 +505,7 @@ void Brain::headPoseCallback(const geometry_msgs::msg::Pose &msg)
         auto z = msg.position.z;
 
         auto orientation = msg.orientation;
-        // 四元素转欧拉角
+
         auto roll = rad2deg(atan2(2 * (orientation.w * orientation.x + orientation.y * orientation.z), 1 - 2 * (orientation.x * orientation.x + orientation.y * orientation.y)));
         auto pitch = rad2deg(asin(2 * (orientation.w * orientation.y - orientation.z * orientation.x)));
         auto yaw = rad2deg(atan2(2 * (orientation.w * orientation.z + orientation.x * orientation.y), 1 - 2 * (orientation.y * orientation.y + orientation.z * orientation.z)));
@@ -583,27 +552,24 @@ vector<GameObject> Brain::getGameObjects(const vision_interface::msg::Detections
         gObj.confidence = obj.confidence;
 
         if (obj.position.size() > 0 && !(obj.position[0] == 0 && obj.position[1] == 0))
-        { // 深度测距成功， 以深度测距为准
+        {
             gObj.posToRobot.x = obj.position[0];
             gObj.posToRobot.y = obj.position[1];
         }
         else
-        { // 深度测距失败，以投影距离为准
+        {
             gObj.posToRobot.x = obj.position_projection[0];
             gObj.posToRobot.y = obj.position_projection[1];
-        } // 注意，z 值没有用到
+        }
 
-        // 计算角度
         gObj.range = norm(gObj.posToRobot.x, gObj.posToRobot.y);
         gObj.yawToRobot = atan2(gObj.posToRobot.y, gObj.posToRobot.x);
-        gObj.pitchToRobot = atan2(config->robotHeight, gObj.range); // 注意这是一个近似值
+        gObj.pitchToRobot = atan2(config->robotHeight, gObj.range);
 
-        // 计算对象在 field 坐标系中的位置
         transCoord(
             gObj.posToRobot.x, gObj.posToRobot.y, 0,
             data->robotPoseToField.x, data->robotPoseToField.y, data->robotPoseToField.theta,
-            gObj.posToField.x, gObj.posToField.y, gObj.posToField.z // 注意, z 没有在其它地方使用, 这里仅为参数占位使用
-        );
+            gObj.posToField.x, gObj.posToField.y, gObj.posToField.z);
 
         res.push_back(gObj);
     }
@@ -613,35 +579,32 @@ vector<GameObject> Brain::getGameObjects(const vision_interface::msg::Detections
 
 void Brain::detectProcessBalls(const vector<GameObject> &ballObjs)
 {
-    // 参数
-    const double confidenceValve = 0.35;        // confidence 低于这个阈值, 认为不是球(注意detection模块目前传入目标置信度都是>0.2的)
-    const double pitchLimit = deg2rad(0);       // 球相对于机器人正前方的 pitch (向下为正) 低于这个值时, 认为不是球. (因为球不会在天上)
-    const int timeCountThreshold = 5;           // 连续若干帧检测到球, 才认为是球，只用于找球策略中
-    const unsigned int detectCntThreshold = 3;  // 最大计数，累积如此数量帧数检测到目标才认为确实识别到了目标（目前只用于球检测）
-    const unsigned int diffConfidThreshold = 4; // 追踪球和高置信度球差异次数阈值，达到后采纳高置信度的球
+    // Parameters
+    const double confidenceValve = 0.35;        // If the confidence is lower than this threshold, it is considered not a ball (note that the target confidence passed in by the detection module is currently all > 0.2).
+    const double pitchLimit = deg2rad(0);       // When the pitch of the ball relative to the front of the robot (downward is positive) is lower than this value, it is considered not a ball. (Because the ball won't be in the sky.)
+    const int timeCountThreshold = 5;           // Only when the ball is detected in consecutive several frames is it considered a ball. This is only used in the ball-finding strategy.
+    const unsigned int detectCntThreshold = 3;  // The maximum count. Only when the target is detected in such a number of frames is it considered that the target is truly identified. (Currently only used for ball detection.)
+    const unsigned int diffConfidThreshold = 4; // The threshold for the difference times between the tracked ball and the high-confidence ball. After reaching this threshold, the high-confidence ball will be adopted.
 
     double bestConfidence = 0;
     double minPixDistance = 1.e4;
-    int indexRealBall = -1;  // 认为哪一个球是真的, -1 表示没有检测到球
-    int indexTraceBall = -1; // 根据像素距离追踪球， -1表示没有追踪到目标
+    int indexRealBall = -1;  // Which ball is considered to be the real one. -1 indicates that no ball has been detected.
+    int indexTraceBall = -1; // Track the ball according to the pixel distance. -1 indicates that no target has been tracked.
 
-    // 找出最可能的真球
+    // Find the most likely real ball.
     for (int i = 0; i < ballObjs.size(); i++)
     {
         auto ballObj = ballObjs[i];
 
-        // 判断: 如果置信度太低, 则认为是误检
+        // Judgment: If the confidence is too low, it is considered a false detection.
         if (ballObj.confidence < confidenceValve)
             continue;
 
-        // 防止把天上的灯识别为球
+        // Prevent the lights in the sky from being recognized as balls.
         if (ballObj.posToRobot.x < -0.5 || ballObj.posToRobot.x > 10.0)
             continue;
 
-        // TODO 加入更多排除参数, 例如在身体上, 明显在球场外, 位置突然大幅度变化等
-        // 被遮挡的条件要加入. 如果突然消失, 没有遮挡的话, 则只相信一小会儿, 如果有遮挡, 可以相信比较长的时间.
-
-        // 找出剩下的球中, 置信度最高的
+        // Find the one with the highest confidence among the remaining balls.
         if (ballObj.confidence > bestConfidence)
         {
             bestConfidence = ballObj.confidence;
@@ -650,7 +613,7 @@ void Brain::detectProcessBalls(const vector<GameObject> &ballObjs)
     }
 
     if (indexRealBall >= 0)
-    { // 检测到球了
+    {
         data->ballDetected = true;
 
         data->ball = ballObjs[indexRealBall];
@@ -658,7 +621,7 @@ void Brain::detectProcessBalls(const vector<GameObject> &ballObjs)
         tree->setEntry<bool>("ball_location_known", true);
     }
     else
-    { // 没有检测到球
+    {
         data->ballDetected = false;
         data->ball.boundingBox.xmin = 0;
         data->ball.boundingBox.xmax = 0;
@@ -667,29 +630,25 @@ void Brain::detectProcessBalls(const vector<GameObject> &ballObjs)
         data->ball.confidence = 0;
     }
 
-    // 计算机器人到球的向量, 在 field 坐标系中的方向
     data->robotBallAngleToField = atan2(data->ball.posToField.y - data->robotPoseToField.y, data->ball.posToField.x - data->robotPoseToField.x);
 }
 
 void Brain::detectProcessMarkings(const vector<GameObject> &markingObjs)
 {
-    const double confidenceValve = 0.1; // confidence 低于这个阈值, 排除
+    const double confidenceValve = 0.1;
 
-    data->markings.clear(); // 清空 brain 中的记忆
+    data->markings.clear();
 
     for (int i = 0; i < markingObjs.size(); i++)
     {
         auto marking = markingObjs[i];
 
-        // 判断: 如果置信度太低, 则认为是误检
         if (marking.confidence < confidenceValve)
             continue;
 
-        // 排除天的上误识别标记
         if (marking.posToRobot.x < -0.5 || marking.posToRobot.x > 10.0)
             continue;
 
-        // 如果通过了重重考验, 则记入 brain
         data->markings.push_back(marking);
     }
 }

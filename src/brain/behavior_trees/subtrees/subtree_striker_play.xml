@@ -2,12 +2,11 @@
    <include path="./subtree_cam_find_and_track_ball.xml" />
    <BehaviorTree ID="StrikerPlay">
       <ReactiveSequence _while="player_role == 'striker'">
-         <ReactiveSequence _while="wait_for_opponent_kickoff" name="等待对方开球">
-            <!-- <PrintMsg msg="等待对方开球"/> -->
+         <ReactiveSequence _while="wait_for_opponent_kickoff" name="wait">
             <SubTree ID="CamFindAndTrackBall" _autoremap="true" />
             <SetVelocity />
          </ReactiveSequence>
-         <ReactiveSequence _while="!wait_for_opponent_kickoff" name="/正常比赛, 即已方开球或对方已经开球">
+         <ReactiveSequence _while="!wait_for_opponent_kickoff" name="start">
             <SubTree ID="CamFindAndTrackBall" _autoremap="true" />
             <Sequence>
                   <StrikerDecide decision_out="{decision}" decision_in="{decision}" chase_threshold="1.2" />

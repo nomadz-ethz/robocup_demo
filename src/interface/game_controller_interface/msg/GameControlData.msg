@@ -1,4 +1,4 @@
-# 跟 include/RoboCupGameControllData.h 中的 RoboCupGameControlData 保持一致的结构
+# Keep the structure consistent with RoboCupGameControlData in include/RoboCupGameControllData.h.
 
 char[4] header              # header to identify the structure
 uint16 version              # version of the data structure

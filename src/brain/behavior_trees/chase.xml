@@ -1,5 +1,3 @@
-<!-- 用于演示追球 -->
-
 <root BTCPP_format="4" >
     <include path="./subtrees/subtree_cam_find_and_track_ball.xml" />
 

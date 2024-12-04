@@ -16,7 +16,6 @@ void RobotClient::init()
 
 int RobotClient::moveHead(double pitch, double yaw)
 {
-    // 软限位
     yaw = cap(yaw, brain->config->headYawLimitLeft, brain->config->headYawLimitRight);
     pitch = max(pitch, brain->config->headPitchLimitUp);
 
@@ -48,7 +47,7 @@ int RobotClient::setVelocity(double x, double y, double theta, bool applyMinX, b
                         .with_radii({0.05, 0.05, 0.02})
                         .with_draw_order(1.0));
 
-    // 速度指令太小时, 给一个最小速度, 以防止不响应 TODO 转为参数化
+
     double minx = 0.05, miny = 0.08, mintheta = 0.05;
     if (applyMinX && fabs(x) < minx && fabs(x) > 1e-5)
         x = x > 0 ? minx : -minx;
@@ -70,7 +69,7 @@ int RobotClient::setVelocity(double x, double y, double theta, bool applyMinX, b
 
 int RobotClient::moveToPoseOnField(double tx, double ty, double ttheta, double longRangeThreshold, double turnThreshold, double vxLimit, double vyLimit, double vthetaLimit, double xTolerance, double yTolerance, double thetaTolerance)
 {
-    Pose2D target_f, target_r; // 移动目标在 field 和 robot 坐标系中的 Pose
+    Pose2D target_f, target_r; 
     target_f.x = tx;
     target_f.y = ty;
     target_f.theta = ttheta;
@@ -80,20 +79,17 @@ int RobotClient::moveToPoseOnField(double tx, double ty, double ttheta, double l
 
     double vx, vy, vtheta;
 
-    // 已经到达目标?
     if (
         (fabs(brain->data->robotPoseToField.x - target_f.x) < xTolerance) && (fabs(brain->data->robotPoseToField.y - target_f.y) < yTolerance) && (fabs(toPInPI(brain->data->robotPoseToField.theta - target_f.theta)) < thetaTolerance))
     {
         return setVelocity(0, 0, 0);
     }
 
-    // 较远时
     static double breakOscillate = 0.0;
     if (targetDist > longRangeThreshold - breakOscillate)
     {
         breakOscillate = 0.5;
 
-        // 角度较大, 先转向目标点
         if (fabs(targetAngle) > turnThreshold)
         {
             vtheta = cap(targetAngle, vthetaLimit, -vthetaLimit);
@@ -107,7 +103,6 @@ int RobotClient::moveToPoseOnField(double tx, double ty, double ttheta, double l
         return setVelocity(vx, 0, vtheta, false, false, false);
     }
 
-    // else 比较近了
     breakOscillate = 0.0;
     vx = cap(target_r.x, vxLimit, -vxLimit);
     vy = cap(target_r.y, vyLimit, -vyLimit);

@@ -2,7 +2,7 @@
    <include path="./subtree_cam_find_and_track_ball.xml" />
    <BehaviorTree ID="StrikerFreekick">
       <ReactiveSequence>
-         <ReactiveSequence _while="gc_is_sub_state_kickoff_side" name="移动到开点球位置">
+         <ReactiveSequence _while="gc_is_sub_state_kickoff_side" name="move to start posittion">
             <SelfLocate mode="trust_direction" _while="odom_calibrated" />
             <SubTree ID="CamFindAndTrackBall" _autoremap="true" _while="odom_calibrated"/>
             <StrikerDecide decision_out="{decision}" decision_in="{decision}" chase_threshold="0.9" />
@@ -11,7 +11,7 @@
             <Adjust _while="decision == 'adjust'"  max_range="0.9" min_range="0.4" turn_threshold="0.15" vy_limit="0.6" vtheta_limit="1.0" vx_limit="0.2" />
             <SetVelocity _while="decision == 'kick'" />
          </ReactiveSequence>
-         <ReactiveSequence _while="!gc_is_sub_state_kickoff_side" name="移动到防守点球位置">
+         <ReactiveSequence _while="!gc_is_sub_state_kickoff_side" name="move to defensive position">
             <SelfLocate mode="trust_direction" _while="odom_calibrated" />
             <SubTree ID="CamFindAndTrackBall" _autoremap="true" _while="odom_calibrated"/>
             <StrikerDecide decision_out="{decision}" decision_in="{decision}" chase_threshold="1.5" />

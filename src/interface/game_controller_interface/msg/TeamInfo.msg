@@ -1,5 +1,5 @@
-# 跟 include/RoboCupGameControllData.h 中的 TeamInfo 保持一致的结构
-# 稍注意一下，coach_message 和 players 在这里定义为不定长数组，更符合语义
+# Keep the structure consistent with TeamInfo in include/RoboCupGameControllData.h.
+# Note that coach_message and players are defined as arrays with variable length here, which is more semantically appropriate.
 
 uint8 team_number           # unique team number
 uint8 team_colour           # colour of the team

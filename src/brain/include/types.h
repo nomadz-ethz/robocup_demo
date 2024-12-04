@@ -1,9 +1,4 @@
-/**
- * @file types.h
- * @brief 定义 brain 项目中用到的 struct 及 enum
- */
 #pragma once
-
 #include <string>
 #include <vector>
 #include <numeric>
@@ -15,32 +10,32 @@ using namespace std;
 
 /* ------------------ Struct ------------------------*/
 
-// 球场尺寸信息
+// Pitch dimension information
 struct FieldDimensions
 {
-    double length;            // 球场长度
-    double width;             // 球场宽度
-    double penaltyDist;       // 罚球点距离底线的直线距离
-    double goalWidth;         // 球门的宽度
-    double circleRadius;      // 中圈的半径
-    double penaltyAreaLength; // 禁区的长
-    double penaltyAreaWidth;  // 禁区的宽
-    double goalAreaLength;    // 球门区的长
-    double goalAreaWidth;     // 球门区的宽
-                              // 注意: 禁区比球门区大；禁区和球门区的长与宽实际上要小。这个命名是为了与比赛规则相统一。
+    double length;            // The length of the pitch.
+    double width;             // The width of the pitch.
+    double penaltyDist;       // The straight-line distance from the penalty spot to the bottom line.
+    double goalWidth;         // The width of the goal.
+    double circleRadius;      // The radius of the center circle.
+    double penaltyAreaLength; // The length of the penalty area.
+    double penaltyAreaWidth;  // The width of the penalty area.
+    double goalAreaLength;    // The length of the goal area.
+    double goalAreaWidth;     // The width of the goal area.
+                              // Note: The penalty area is larger than the goal area; the actual lengths and widths of the penalty area and the goal area are smaller. This naming is to be consistent with the competition rules.
 };
 const FieldDimensions FD_KIDSIZE{9, 6, 1.5, 2.6, 0.75, 2, 5, 1, 3};
 const FieldDimensions FD_ADULTSIZE{14, 9, 2.1, 2.6, 1.5, 3, 6, 1, 4};
 
-// Pose2D, 记录平面上的一个点以及朝向
+// Pose2D, used to record a point on a plane and its orientation
 struct Pose2D
 {
     double x = 0;
     double y = 0;
-    double theta = 0; // rad, 从 x 轴正方向开始, 逆时针为正
+    double theta = 0; // rad, counterclockwise is positive starting from the positive direction of the x-axis.
 };
 
-// Point, 记录一个三维点
+// Point, used to record a three-dimensional point
 struct Point
 {
     double x;
@@ -48,7 +43,7 @@ struct Point
     double z;
 };
 
-// Point2D, 记录一个二维点
+// Point2D, used to record a two-dimensional point
 struct Point2D
 {
     double x;
@@ -64,25 +59,25 @@ struct BoundingBox
     double ymax;
 };
 
-// GameObject, 用于存储比赛中的重要实体信息，如 Ball, Goalpost 等。相比于 /detect 消息中的 detection::DetectedObject，它的信息更为丰富。
+/// GameObject, used to store the information of important entities in the game, such as Ball, Goalpost, etc. Compared with the detection::DetectedObject in the /detect message, it has more abundant information.
 struct GameObject
 {
-    // --- 从 /detect 消息中获得 ---
-    string label;              // 物体被识别为什么
-    BoundingBox boundingBox;   // 物体在摄像头中的识别框, 左上角为 0 点, 向右为 x, 向下为 y
-    Point2D precisePixelPoint; // 物体的精确像素点位置, 仅地面标志点有这一数据
-    double confidence;         // 识别的置信度
-    Point posToRobot;          // 物体在机器人本体坐标系的的位置, 位置为 2D, 忽略 z 值.
+    // --- Obtained from the /detect message ---
+    string label;              // What the object is identified as.
+    BoundingBox boundingBox;   // The recognition box of the object in the camera, with the upper left corner as the origin, x increasing to the right and y increasing downward.
+    Point2D precisePixelPoint; // The precise pixel point position of the object. Only ground landmark points have this data.
+    double confidence;         // The confidence of the identification.
+    Point posToRobot;          // The position of the object in the robot's body coordinate system. The position is 2D, ignoring the z value.
 
-    // --- 在 processDetectedObject 函数中计算获得 ---
-    string info;                     // 用于存储额外的信息, 如, 门柱对象可以存储门柱是哪根门柱
-    Point posToField;                // 物体在物体场坐标系的的位置, 位置为 2D, 忽略 z 值. x 向前, y 向左.
-    double range;                    // 物体距离机器人中心在物体场平面上的投影点的直线距离
-    double pitchToRobot, yawToRobot; // 物体相对于机器人正前方的 pitch 和 yaw, 单位 rad, 向下和向左为正
-    rclcpp::Time timePoint;          // 物体被检测到的时间
+    // --- Calculated and obtained in the processDetectedObject function ---
+    string info;                     // Used to store additional information. For example, for a goalpost object, it can store which goalpost it is.
+    Point posToField;                // The position of the object in the field coordinate system. The position is 2D, ignoring the z value. x is forward and y is leftward.
+    double range;                    // The straight-line distance from the object to the projection point of the robot's center on the field plane.
+    double pitchToRobot, yawToRobot; // The pitch and yaw of the object relative to the front of the robot, in rad. Downward and leftward are positive.
+    rclcpp::Time timePoint;          // The time when the object was detected.
 };
 
-// Joystick 按键对应的数字
+// The numbers corresponding to the Joystick buttons
 enum JoystickBTN
 {
     BTN_X,

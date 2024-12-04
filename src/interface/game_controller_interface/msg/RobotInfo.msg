@@ -1,5 +1,4 @@
-# 跟 include/RoboCupGameControllData.h 中的 RobotInfo 保持一致的结构
-
+# Keep the structure consistent with RobotInfo in include/RoboCupGameControllData.h
 uint8 penalty                   # penalty state of the player
 uint8 secs_till_unpenalised     # estimate of time till unpenalised
 uint8 number_of_warnings        # number of warnings

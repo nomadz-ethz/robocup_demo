@@ -9,68 +9,74 @@
 using namespace std;
 
 /**
- * 存储 Brain 需要的一些配置值，这些值应该是初始化就确认好了，在机器人决策过程中只读不改的
- * 需要在决策过程中变化的值，应该放到 BrainData 中
- * 注意：
- * 1、配置文件会从 config/config.yaml 中读取
- * 2、如果存在 config/config_local.yaml，将会覆盖 config/config.yaml 的值
- * 
+ * Stores configuration values required by the Brain. These values should be confirmed during initialization
+ * and remain read-only during the robot's decision-making process.
+ * Values that need to change during the decision process should be placed in BrainData.
+ *
+ * Note:
+ * 1. The configuration file will be read from config/config.yaml.
+ * 2. If config/config_local.yaml exists, its values will override those in config/config.yaml.
  */
+
 class BrainConfig
 {
 public:
     // ---------- start config from config.yaml ---------------------------------------------
-    // 这部分的变量，是直接从配置文件中读取到的原始值，如果在配置文件中新增了配置，在这里添加对应的变量存储
-    // 这些值会在 BrainNode 中被覆盖，所以即使 config.yaml 中没显示配置，这里的默认值不会生效。
-    // 真正要设置默认值得在 BrainNode 的 declare_parameter 里配置
-    int teamId;                 // 对应 game.team_id
-    int playerId;               // 对应 game.player_id
-    string fieldType;           // 对应 game.field_type  球场类型, "adult_size"(14*9) | "kid_size" (9*6)
-    string playerRole;          // 对应 game.player_role   "striker" | "goal_keeper"
-    string playerStartPos;      // 对应 game.player_start_post  "left" | "right", 从自己半场的左侧还是右侧上场
-    
-    double robotHeight;         // 对应 robot.robot_height 机器人的身高(m), 用于估算距离, 可以通过 SetParam 节点进行调试. In behaviortree xml: <SetParam code="robot_height=1.1" />
-    double robotOdomFactor;     // 对应 robot.odom_factor odom 认为走的距离与机器人实际走的距离的比值, 用于修正 odom
-    double vxFactor;            // 对应 robot.vx_factor 修正 vx 实际比指令大的问题
-    double yawOffset;           // 对应 robot.yaw_offset 修正测距时往左偏的问题 
-    
-    bool rerunLogEnable;        // 对应 rerunLog.enable  是否开启 rerunLog
-    string rerunLogServerAddr;    // 对应 rerunLog.server_ip  rerunLog 服务器 IP
-    int rerunLogImgInterval;    // 对应 rerunLog.img_interval 每多少次消息记录一次 log 一次 img, 提升这一值可以减少 log 大小, 提升 log 传输速度.
-    
-    string treeFilePath;        // 现在没放在 config.yaml 中了，放在 launch.py 中指定，行为树文件的路径
+    // These variables are the raw values directly read from the configuration file.
+    // If new configurations are added to the configuration file, corresponding variables should be added here to store them.
+    // These values will be overwritten in BrainNode, so even if a configuration is not explicitly defined in config.yaml,
+    // the default values here will not take effect.
+    // The actual default values should be configured in the BrainNode's declare_parameter.
+    int teamId;            // Corresponds to game.team_id
+    int playerId;          // Corresponds to game.player_id
+    string fieldType;      // Corresponds to game.field_type  "adult_size"(14*9) | "kid_size" (9*6)
+    string playerRole;     // Corresponds to game.player_role   "striker" | "goal_keeper"
+    string playerStartPos; // Corresponds to game.player_start_post  "left" | "right"
+
+    double robotHeight;     // Corresponds to robot.robot_height
+    double robotOdomFactor; // Corresponds to robot.odom_factor odom
+    double vxFactor;        // Corresponds to robot.vx_factor fix the issue where the actual vx is larger than the command
+    double yawOffset;       // Corresponds to robot.yaw_offset fix the issue of leftward bias during distance measurement
+
+    bool rerunLogEnable;       // Corresponds to rerunLog.enable  Whether to enable rerunLog
+    string rerunLogServerAddr; // Corresponds to rerunLog.server_addr  rerunLog address
+    int rerunLogImgInterval;   // Corresponds to rerunLog.img_interval the interval to record the images
+
+    string treeFilePath; //  It is no longer placed in config.yaml; the path to the behavior-tree file is now specified in launch.py.
     // ----------  end config from config.yaml ---------------------------------------------
 
-    // game 参数
-    FieldDimensions fieldDimensions; // 球场尺寸
+    // game parameters
+    FieldDimensions fieldDimensions;
 
-    // 相机像素
+    // Camera resolution
     double camPixX = 1280;
     double camPixY = 720;
 
-    // 相机视角
+    // Camera angle
     double camAngleX = deg2rad(90);
     double camAngleY = deg2rad(65);
 
-    // 头转动软限位
+    // Head rotation soft limit
     double headYawLimitLeft = 1.1;
     double headYawLimitRight = -1.1;
     double headPitchLimitUp = 0.0;
 
-    // 速度上限
+    // Speed limit
     double vxLimit = 1.2;
     double vyLimit = 0.4;
     double vthetaLimit = 1.5;
 
-    // 策略参数
-    double safeDist = 2.0;                  // 用于碰撞检测的安全距离, 小于这个距离认为碰撞
+    // Strategy parameters
+    double safeDist = 2.0; // Safety distance for collision detection. If the distance is smaller than this value, a collision is considered.
     double goalPostMargin = 0.4;
-    double goalPostMarginForTouch = 0.1; // 计算球门柱的margin，用于计算球门柱的角度，越大则计算时候球门越小，touch的时候，这个margin不一样，通常会更小
-    double memoryLength = 3.0;           // 连续多少秒看不到球时, 就认为球丢了
+    // Calculate the margin of the goalpost, used to compute the angle of the goalpost. The larger the margin, the smaller the goal appears during calculations.
+    // During a touch event, this margin is different and is typically smaller.
+    double goalPostMarginForTouch = 0.1;
+    double memoryLength = 3.0; // The number of seconds during which the ball is not visible, after which it is considered lost.
 
-    // BrainNode 填充完参数后，调用 handle() 进行一些参数的处理（校正、计算等）,成功返回 true
+    // After Brain fills in the parameters, it calls handle() to process the parameters (such as calibration, calculations, etc.),
     void handle();
-    
-    // 把配置信息输出到指定的输出流中(debug用)
+
+    // Output the configuration information to the specified output stream (for debugging).
     void print(ostream &os);
 };

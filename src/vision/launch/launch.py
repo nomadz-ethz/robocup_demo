@@ -30,7 +30,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'sim', 
             default_value='false',
-            description='是否在仿真中'
+            description='if it is in sim'
         ),
         OpaqueFunction(function=handle_configuration)
     ])

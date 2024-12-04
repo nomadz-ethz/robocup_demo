@@ -8,12 +8,12 @@ brain_node:
       player_start_pos: "left" # right | left
       
     robot:
-      robot_height: 1.0 # 用于大概估算检测到的物体相对于机器人头的 pitch 角
-      odom_factor: 1.2 # 大概估算 odom 中给出的距离与实际行走的距离的比例
-      vx_factor: 0.90 # 修正步态 x 与 y 的差异
-      yaw_offset: 0.10 # 修正步态的前进角度
+      robot_height: 1.0
+      odom_factor: 1.2
+      vx_factor: 0.90
+      yaw_offset: 0.10
 
     rerunLog:
       enable: false
-      server_addr: "127.0.0.1:9876" # 开启了 rerun Viewer 的机器地址
-      img_interval: 1 #每多少帧图像 log 一次.
+      server_addr: "127.0.0.1:9876"
+      img_interval: 1

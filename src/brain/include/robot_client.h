@@ -6,61 +6,58 @@
 
 #include <booster_msgs/msg/rpc_req_msg.hpp>
 
-
 using namespace std;
 
-class Brain; // 类相互依赖，向前声明
-
+class Brain; // Forward declaration
 
 /**
- * RobotClient 类，调用 RobotSDK 操控机器人的操作都放在这里
- * 因为目前的代码里依赖 brain 里相关的一些东西，现在设计成跟 brain 相互依赖
+ * The RobotClient class. All operations for controlling the robot by calling the RobotSDK are placed here.
  */
 class RobotClient
 {
 public:
-    RobotClient(Brain* argBrain) : brain(argBrain) {}
+    RobotClient(Brain *argBrain) : brain(argBrain) {}
 
     void init();
 
     /**
-     * @brief 移动机器人的头部
+     * @brief Move the robot's head.
      *
      * @param pitch
      * @param yaw
      *
-     * @return int , 0 表示执行成功
+     * @return int, 0 indicates successful execution.
      */
     int moveHead(double pitch, double yaw);
 
     /**
-     * @brief 设置机器人的移动速度
-     * 
-     * @param x double, 向前(m/s)
-     * @param y double, 向左(m/s)
-     * @param theta double, 逆时针转动角度(rad/s)
-     * @param applyMinX, applyMinY, applyMinTheta bool 当速度指令过小时, 是否调整指令大小以防止不响应.
-     * 
-     * @return int , 0 表示执行成功
-     * 
-    */
-    int setVelocity(double x, double y, double theta, bool applyMinX=true, bool applyMinY=true, bool applyMinTheta=true);
+     * @brief Set the moving speed of the robot.
+     *
+     * @param x double, forward (m/s).
+     * @param y double, leftward (m/s).
+     * @param theta double, counterclockwise rotation angle (rad/s).
+     * @param applyMinX, applyMinY, applyMinTheta bool Whether to adjust the command size to prevent non-response when the speed command is too small.
+     *
+     * @return int, 0 indicates successful execution.
+     *
+     */
+    int setVelocity(double x, double y, double theta, bool applyMinX = true, bool applyMinY = true, bool applyMinTheta = true);
 
     /**
-     * @brief 以速度模式走向球场坐标系中的某个 Pose, 注意最后朝向也要达到
-     * 
-     * @param tx, ty, ttheta double, 目标的 Pose, Field 坐标系
-     * @param longRangeThreshold double, 距离超过这个值时, 优先转向目标点走过去, 而不是直接调整位置
-     * @param turnThreshold double, 目标点所在的方向(注意不是最终朝向 ttheta) 与目前的角度相差大于这个值时, 先转身朝向目标
-     * @param vxLimit, vyLimit, vthetaLimit double, 各方向速度的上限, m/s, rad/s
-     * @param xTolerance, yTolerance, thetaTolerance double, 判断已经到达目标点的容差
-     * 
-     * @return int 运控命令返回值, 0 代表成功
+     * @brief Walk towards a certain Pose in the pitch coordinate system in speed mode. Note that the final orientation should also be reached.
+     *
+     * @param tx, ty, ttheta double, the target Pose, in the Field coordinate system.
+     * @param longRangeThreshold double, when the distance exceeds this value, it is preferred to turn towards the target point and walk over instead of directly adjusting the position.
+     * @param turnThreshold double, when the angle difference between the direction of the target point (note that it is not the final orientation ttheta) and the current angle is greater than this value, first turn to face the target.
+     * @param vxLimit, vyLimit, vthetaLimit double, the upper limits of speeds in each direction, m/s, rad/s.
+     * @param xTolerance, yTolerance, thetaTolerance double, the tolerances for judging that the target point has been reached.
+     *
+     * @return int The return value of the motion control command, 0 represents success.
      */
     int moveToPoseOnField(double tx, double ty, double ttheta, double longRangeThreshold, double turnThreshold, double vxLimit, double vyLimit, double vthetaLimit, double xTolerance, double yTolerance, double thetaTolerance);
 
     /**
-     * @brief 挥手
+     * @brief Wave the hand.
      */
     int waveHand(bool doWaveHand);
 

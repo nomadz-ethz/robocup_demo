@@ -1,7 +1,3 @@
-/**
- * @file stablizer.h
- * @brief 定义一个 Stablizer Class 用于防抖
- */
 #pragma once
 
 #include <vector>
@@ -11,7 +7,6 @@
 
 using namespace std;
 namespace chr = std::chrono;
-// Stablizer: 记录一定时间内数据, 进行处理, 防止抖动
 class Stablizer
 {
 public:
@@ -25,7 +20,6 @@ public:
         _timespan = chr::milliseconds(msec);
     };
 
-    // 加入新的数据
     void push(double x)
     {
         auto cur_time = chr::high_resolution_clock::now();
@@ -34,7 +28,6 @@ public:
         _removeOldData();
     };
 
-    // 获取当前平滑后的数据, method: mean | max | min
     double getStablized(string method)
     {
         _removeOldData();

@@ -14,7 +14,6 @@ BrainLog::BrainLog(Brain *argBrain) : enabled(false), brain(argBrain), rerunLog(
     rerun::Error err = rerunLog.connect(brain->config->rerunLogServerAddr);
     if (err.is_err())
     {
-        // 注意这里，如果指定的地址里没有启动服务，err其实也不会报错，只会阻塞一定的时间（默认2s)，进不到这个分支
         prtErr("Connect rerunLog server failed: " + err.description);
         enabled = false;
         return;

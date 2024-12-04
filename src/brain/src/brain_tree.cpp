@@ -7,11 +7,11 @@
 #include "std_msgs/msg/string.hpp"
 
 /**
- * 这里使用宏定义来缩减 RegisterBuilder 的代码量
- * REGISTER_BUILDER(Test) 展开后的效果是
+ * Here, a macro definition is used to reduce the amount of code in RegisterBuilder.
+ * The effect after expanding REGISTER_BUILDER(Test) is as follows:
  * factory.registerBuilder<Test>(  \
  *      "Test",                    \
- *     [this](const string& name, const NodeConfig& config) { return make_unique<Test>(name, config, brain); });
+ *      [this](const string& name, const NodeConfig& config) { return make_unique<Test>(name, config, brain); });
  */
 #define REGISTER_BUILDER(Name)     \
     factory.registerBuilder<Name>( \
@@ -44,7 +44,7 @@ void BrainTree::init()
     factory.registerBehaviorTreeFromFile(brain->config->treeFilePath);
     tree = factory.createTree("MainTree");
 
-    // 构造完成后，初始化 blackboard entry
+    // init blackboard entry
     initEntry();
 }
 
@@ -58,10 +58,9 @@ void BrainTree::initEntry()
     setEntry<string>("defend_decision", "chase");
     setEntry<double>("ball_range", 0);
 
-    // 开球，对方开球时球动了，或到了时间限制时，置为 true，表示我们可以动了。
     setEntry<bool>("gamecontroller_isKickOff", true);
-    // 开球，对方开球时球动了，或到了时间限制时，置为 true，表示我们可以动了。
     setEntry<bool>("gamecontroller_isKickOffExecuted", true);
+
     setEntry<string>("gc_game_state", "");
     setEntry<string>("gc_game_sub_state_type", "NONE");
     setEntry<string>("gc_game_sub_state", "");
@@ -109,24 +108,23 @@ NodeStatus CamTrackBall::tick()
 {
     double pitch, yaw;
     if (!brain->data->ballDetected)
-    { // 没看见, 看向记忆中球的大致位置
+    {
         pitch = brain->data->ball.pitchToRobot;
         yaw = brain->data->ball.yawToRobot;
     }
     else
-    {                                   // 看见了, 则保持球在视野的中心
-        const double pixTolerance = 10; // 球距离视野中心的像素差小于这个容差, 则认为在视野中心了.
+    {
+        const double pixTolerance = 10;
 
-        // NOTE: box 的坐标系, Viewport 左上角为原点, x 轴向右为正, y轴向下为正.
         double deltaX = mean(brain->data->ball.boundingBox.xmax, brain->data->ball.boundingBox.xmin) - brain->config->camPixX / 2;
-        double deltaY = mean(brain->data->ball.boundingBox.ymax, brain->data->ball.boundingBox.ymin) - brain->config->camPixY * 2 / 3; // 用下视野 2/3 位置来追踪球, 以获得更多的场上信息.
+        double deltaY = mean(brain->data->ball.boundingBox.ymax, brain->data->ball.boundingBox.ymin) - brain->config->camPixY * 2 / 3;
 
         if (std::fabs(deltaX) < pixTolerance && std::fabs(deltaY) < pixTolerance)
-        { // 认为已经在中心了
+        {
             return NodeStatus::SUCCESS;
         }
 
-        double smoother = 1.5; // 越大头部运动越平滑, 越小则越快, 小于 1.0 会超调震荡
+        double smoother = 1.5;
         double deltaYaw = deltaX / brain->config->camPixX * brain->config->camAngleX / smoother;
         double deltaPitch = deltaY / brain->config->camPixY * brain->config->camAngleY / smoother;
 
@@ -169,20 +167,20 @@ NodeStatus CamFindBall::tick()
     if (brain->data->ballDetected)
     {
         return NodeStatus::SUCCESS;
-    } // 目前全部节点都是返回 Success 的, 返回 failure 会影响后面节点的执行.
+    }
 
     auto curTime = brain->get_clock()->now();
     auto timeSinceLastCmd = (curTime - _timeLastCmd).nanoseconds() / 1e6;
     if (timeSinceLastCmd < _cmdIntervalMSec)
     {
         return NodeStatus::SUCCESS;
-    } // 没到下条指令的执行时间
+    }
     else if (timeSinceLastCmd > _cmdRestartIntervalMSec)
-    {                  // 超过一定时间, 认为这是重新从头执行
-        _cmdIndex = 0; // 注意这里不 return
+    {
+        _cmdIndex = 0;
     }
     else
-    { // 达到时间, 执行下一个指令, 同样不 return
+    {
         _cmdIndex = (_cmdIndex + 1) % (sizeof(_cmdSequence) / sizeof(_cmdSequence[0]));
     }
 
@@ -227,14 +225,13 @@ NodeStatus Chase::tick()
     double ballRange = brain->data->ball.range;
     double ballYaw = brain->data->ball.yawToRobot;
 
-    Pose2D target_f, target_r; // 移动目标在 field 和 robot 坐标系中的 Pose, 只看 x,y
+    Pose2D target_f, target_r;
     if (brain->data->robotPoseToField.x - brain->data->ball.posToField.x > (_state == "chase" ? 1.0 : 0.0))
-    { // circle back
+    {
         _state = "circle_back";
-        // 目标 x 坐标
+
         target_f.x = brain->data->ball.posToField.x - dist;
 
-        // 目标 y 坐标. 即决策从哪边绕, 并防止震荡
         if (brain->data->robotPoseToField.y > brain->data->ball.posToField.y - _dir)
             _dir = 1.0;
         else
@@ -255,7 +252,7 @@ NodeStatus Chase::tick()
     double vy = target_r.y;
     double vtheta = ballYaw * 2.0;
 
-    double linearFactor = 1 / (1 + exp(3 * (ballRange * fabs(ballYaw)) - 3)); // 距离远时, 优先转向
+    double linearFactor = 1 / (1 + exp(3 * (ballRange * fabs(ballYaw)) - 3));
     vx *= linearFactor;
     vy *= linearFactor;
 
@@ -283,20 +280,19 @@ NodeStatus SimpleChase::tick()
 
     double vx = brain->data->ball.posToRobot.x;
     double vy = brain->data->ball.posToRobot.y;
-    double vtheta = brain->data->ball.yawToRobot * 2.0; // 后面的乘数越大, 转身越快
+    double vtheta = brain->data->ball.yawToRobot * 2.0;
 
-    double linearFactor = 1 / (1 + exp(3 * (brain->data->ball.range * fabs(brain->data->ball.yawToRobot)) - 3)); // 距离远时, 优先转向
+    double linearFactor = 1 / (1 + exp(3 * (brain->data->ball.range * fabs(brain->data->ball.yawToRobot)) - 3));
     vx *= linearFactor;
     vy *= linearFactor;
 
-    vx = cap(vx, vxLimit, -0.1);     // 进一步限速
-    vy = cap(vy, vyLimit, -vyLimit); // vy 进一步限速
+    vx = cap(vx, vxLimit, -0.1);
+    vy = cap(vy, vyLimit, -vyLimit);
 
     if (brain->data->ball.range < stopDist)
     {
         vx = 0;
         vy = 0;
-        // if (fabs(brain->data->ball.yawToRobot) < stopAngle) vtheta = 0; // uncomment 这一行, 会站住. 现在站不太稳, 就让它一直动着吧.
     }
 
     brain->client->setVelocity(vx, vy, vtheta, false, false, false);
@@ -322,13 +318,12 @@ NodeStatus Adjust::tick()
 
     double vx = 0, vy = 0, vtheta = 0;
     double kickDir = (position == "defense") ? atan2(brain->data->ball.posToField.y, brain->data->ball.posToField.x + brain->config->fieldDimensions.length / 2) : atan2(-brain->data->ball.posToField.y, brain->config->fieldDimensions.length / 2 - brain->data->ball.posToField.x);
-    double dir_rb_f = brain->data->robotBallAngleToField; // 机器人到球, field 坐标系中的方向
+    double dir_rb_f = brain->data->robotBallAngleToField;
     double deltaDir = toPInPI(kickDir - dir_rb_f);
     double dir = deltaDir > 0 ? -1.0 : 1.0;
     double ballRange = brain->data->ball.range;
     double ballYaw = brain->data->ball.yawToRobot;
 
-    // 计算绕球转的速度指令
     double s = 0.4;
     double r = 0.8;
     vx = -s * dir * sin(ballYaw);
@@ -349,7 +344,7 @@ NodeStatus Adjust::tick()
 
 NodeStatus StrikerDecide::tick()
 {
-    // 读取和处理参数
+
     double chaseRangeThreshold;
     getInput("chase_threshold", chaseRangeThreshold);
     string lastDecision, position;
@@ -357,10 +352,10 @@ NodeStatus StrikerDecide::tick()
     getInput("position", position);
 
     double kickDir = (position == "defense") ? atan2(brain->data->ball.posToField.y, brain->data->ball.posToField.x + brain->config->fieldDimensions.length / 2) : atan2(-brain->data->ball.posToField.y, brain->config->fieldDimensions.length / 2 - brain->data->ball.posToField.x);
-    double dir_rb_f = brain->data->robotBallAngleToField; // 机器人到球, field 坐标系中的方向
+    double dir_rb_f = brain->data->robotBallAngleToField;
     auto goalPostAngles = brain->getGoalPostAngles(0.3);
-    double theta_l = goalPostAngles[0]; // 球到左边门柱的角度(我们的左)
-    double theta_r = goalPostAngles[1]; // 球到右边门柱的角度
+    double theta_l = goalPostAngles[0];
+    double theta_r = goalPostAngles[1];
     bool angleIsGood = (theta_l > dir_rb_f && theta_r < dir_rb_f);
     double ballRange = brain->data->ball.range;
     double ballYaw = brain->data->ball.yawToRobot;
@@ -397,17 +392,17 @@ NodeStatus StrikerDecide::tick()
 
 NodeStatus GoalieDecide::tick()
 {
-    // 读取和处理参数
+
     double chaseRangeThreshold;
     getInput("chase_threshold", chaseRangeThreshold);
     string lastDecision, position;
     getInput("decision_in", lastDecision);
 
     double kickDir = atan2(brain->data->ball.posToField.y, brain->data->ball.posToField.x + brain->config->fieldDimensions.length / 2);
-    double dir_rb_f = brain->data->robotBallAngleToField; // 机器人到球, field 坐标系中的方向
+    double dir_rb_f = brain->data->robotBallAngleToField;
     auto goalPostAngles = brain->getGoalPostAngles(0.3);
-    double theta_l = goalPostAngles[0]; // 球到左边门柱的角度(我们的左)
-    double theta_r = goalPostAngles[1]; // 球到右边门柱的角度
+    double theta_l = goalPostAngles[0];
+    double theta_r = goalPostAngles[1];
     bool angleIsGood = (dir_rb_f > -M_PI / 2 && dir_rb_f < M_PI / 2);
     double ballRange = brain->data->ball.range;
     double ballYaw = brain->data->ball.yawToRobot;
@@ -449,32 +444,29 @@ NodeStatus GoalieDecide::tick()
 
 NodeStatus Kick::onStart()
 {
-    // 初始化 Node
     _startTime = brain->get_clock()->now();
 
-    // 读取参数
     double vxLimit, vyLimit;
     getInput("vx_limit", vxLimit);
     getInput("vy_limit", vyLimit);
     int minMSecKick;
     getInput("min_msec_kick", minMSecKick);
-    double vxFactor = brain->config->vxFactor;   // 用于调整 vx, vx *= vxFactor, 以补偿 x, y 方向的速度参数与实际速度比例的偏差, 使运动方向准确
-    double yawOffset = brain->config->yawOffset; // 用于补偿定位角度的偏差
+    double vxFactor = brain->config->vxFactor;
+    double yawOffset = brain->config->yawOffset;
 
-    // 计算速度指令
     double adjustedYaw = brain->data->ball.yawToRobot - yawOffset;
-    double tx = cos(adjustedYaw) * brain->data->ball.range; // 移动的目标
+    double tx = cos(adjustedYaw) * brain->data->ball.range;
     double ty = sin(adjustedYaw) * brain->data->ball.range;
 
     double vx, vy;
 
     if (fabs(ty) < 0.01 && fabs(adjustedYaw) < 0.01)
-    { // 在可踢中的范围内, 尽量直走, 同时避免后面出现除 0 的问题.
+    {
         vx = vxLimit;
         vy = 0.0;
     }
     else
-    { // 否则计算出要向哪个方向移动, 并给出可实现的速度指令
+    {
         vy = ty > 0 ? vyLimit : -vyLimit;
         vx = vy / ty * tx * vxFactor;
         if (fabs(vx) > vxLimit)
@@ -483,14 +475,11 @@ NodeStatus Kick::onStart()
             vx = vxLimit;
         }
     }
-    // 估算移动所需时间
+
     double speed = norm(vx, vy);
-    // _msecKick = speed > 1e-5 ?
-    //                 max(minMSecKick, static_cast<int>(brain->data->ball.range / speed * 1000)) :
-    //                 minMSecKick;
+
     _msecKick = speed > 1e-5 ? minMSecKick + static_cast<int>(brain->data->ball.range / speed * 1000) : minMSecKick;
 
-    // 发布运动指令
     brain->client->setVelocity(vx, vy, 0, false, false, false);
     return NodeStatus::RUNNING;
 }
@@ -500,7 +489,6 @@ NodeStatus Kick::onRunning()
     if (brain->msecsSince(_startTime) < _msecKick)
         return NodeStatus::RUNNING;
 
-    // else
     brain->client->setVelocity(0, 0, 0);
     return NodeStatus::SUCCESS;
 }
@@ -536,12 +524,6 @@ NodeStatus RobotFindBall::onRunning()
     double vx = 0;
     double vy = 0;
     double vtheta = 0;
-    if (brain->data->ball.range < 0.3)
-    { // 记忆中的球位置太近了, 后退一点
-      // vx = cap(-brain->data->ball.posToRobot.x, 0.2, -0.2);
-      // vy = cap(-brain->data->ball.posToRobot.y, 0.2, -0.2);
-    }
-    // vtheta = _turnDir > 0 ? vyawLimit : -vyawLimit;
     brain->client->setVelocity(0, 0, vyawLimit * _turnDir);
     return NodeStatus::RUNNING;
 }
@@ -554,17 +536,15 @@ void RobotFindBall::onHalted()
 NodeStatus SelfLocate::tick()
 {
     string mode = getInput<string>("mode").value();
-    double xMin = 0.0, xMax = 0.0, yMin = 0, yMax = 0.0, thetaMin = 0.0, thetaMax = 0.0; // 结束条件
+    double xMin = 0.0, xMax = 0.0, yMin = 0, yMax = 0.0, thetaMin = 0.0, thetaMax = 0.0;
     auto markers = brain->data->getMarkers();
 
-    // 计算约束条件
     if (mode == "enter_field")
     {
-        // x 范围: 已方半场，不超过中圈的边界
+
         xMin = -brain->config->fieldDimensions.length / 2;
         xMax = -brain->config->fieldDimensions.circleRadius;
 
-        // y 范围: 边线外，距离边线 1 m 以内
         if (brain->config->playerStartPos == "left")
         {
             yMin = brain->config->fieldDimensions.width / 2;
@@ -576,7 +556,6 @@ NodeStatus SelfLocate::tick()
             yMax = -brain->config->fieldDimensions.width / 2;
         }
 
-        // Theta 范围: 面向赛场，左右偏移不超过 30 度
         if (brain->config->playerStartPos == "left")
         {
             thetaMin = -M_PI / 2 - M_PI / 6;
@@ -600,8 +579,8 @@ NodeStatus SelfLocate::tick()
     else if (mode == "trust_direction")
     {
         int msec = static_cast<int>(brain->msecsSince(brain->data->lastSuccessfulLocalizeTime));
-        double maxDriftSpeed = 0.1;                      // m/s
-        double maxDrift = msec / 1000.0 * maxDriftSpeed; // 在这个时间内, odom 最多漂移了多少距离
+        double maxDriftSpeed = 0.1;
+        double maxDrift = msec / 1000.0 * maxDriftSpeed;
 
         xMin = max(-brain->config->fieldDimensions.length / 2, brain->data->robotPoseToField.x - maxDrift);
         xMax = min(brain->config->fieldDimensions.length / 2, brain->data->robotPoseToField.x + maxDrift);
@@ -637,17 +616,15 @@ NodeStatus SelfLocate::tick()
                             "thetaMin: " + to_string(thetaMin) + " " +
                             "thetaMax: " + to_string(thetaMax)));
     }
-    prtDebug("定位结果: res: " + to_string(res.code) + " time: " + to_string(res.msecs));
+    prtDebug("locate result: res: " + to_string(res.code) + " time: " + to_string(res.msecs));
 
-    // 定位失败
     if (!res.success)
         return NodeStatus::SUCCESS; // Do not block following nodes.
 
-    // else 定位成功
     brain->calibrateOdom(res.pose.x, res.pose.y, res.pose.theta);
     brain->tree->setEntry<bool>("odom_calibrated", true);
     brain->data->lastSuccessfulLocalizeTime = brain->get_clock()->now();
-    prtDebug("定位成功: " + to_string(res.pose.x) + " " + to_string(res.pose.y) + " " + to_string(rad2deg(res.pose.theta)) + " Dur: " + to_string(res.msecs));
+    prtDebug("locate success: " + to_string(res.pose.x) + " " + to_string(res.pose.y) + " " + to_string(rad2deg(res.pose.theta)) + " Dur: " + to_string(res.msecs));
 
     return NodeStatus::SUCCESS;
 }
@@ -682,8 +659,6 @@ NodeStatus WaveHand::tick()
         brain->client->waveHand(false);
     return NodeStatus::SUCCESS;
 }
-
-/* ------------------------------------ 节点实现: 调试用 ------------------------------------*/
 
 NodeStatus PrintMsg::tick()
 {
