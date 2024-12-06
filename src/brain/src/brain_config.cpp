@@ -44,6 +44,7 @@ void BrainConfig::print(ostream &os)
     os << "playerId = " << playerId << endl;
     os << "fieldType = " << fieldType << endl;
     os << "playerRole = " << playerRole << endl;
+    os << "playerStartPos = " << playerStartPos << endl;
     os << "----------------------------------------" << endl;
     os << "robotHeight = " << robotHeight << endl;
     os << "robotOdomFactor = " << robotOdomFactor << endl;
