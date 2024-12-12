@@ -76,28 +76,3 @@ struct GameObject
     double pitchToRobot, yawToRobot; // The pitch and yaw of the object relative to the front of the robot, in rad. Downward and leftward are positive.
     rclcpp::Time timePoint;          // The time when the object was detected.
 };
-
-// The numbers corresponding to the Joystick buttons
-enum JoystickBTN
-{
-    BTN_X,
-    BTN_A,
-    BTN_B,
-    BTN_Y,
-    BTN_LB,
-    BTN_RB,
-    BTN_LT,
-    BTN_RT,
-    BTN_BACK,
-    BTN_START,
-};
-
-enum JoystickAX
-{
-    AX_LX,
-    AX_LY,
-    AX_RX,
-    AX_RY,
-    AX_DX,
-    AX_DY,
-};

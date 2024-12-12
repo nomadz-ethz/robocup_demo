@@ -4,6 +4,7 @@
 #include "brain.h"
 #include "utils/print.h"
 #include "utils/math.h"
+#include "joy_msg.h"
 
 using namespace std;
 using std::placeholders::_1;
@@ -22,6 +23,7 @@ Brain::Brain() : rclcpp::Node("brain_node")
     declare_parameter<double>("robot.odom_factor", 1.0);
     declare_parameter<double>("robot.vx_factor", 0.95);
     declare_parameter<double>("robot.yaw_offset", 0.1);
+    declare_parameter<string>("robot.joystick", "");
 
     declare_parameter<bool>("rerunLog.enable", false);
     declare_parameter<string>("rerunLog.server_addr", "");
@@ -75,6 +77,7 @@ void Brain::loadConfig()
     get_parameter("robot.odom_factor", config->robotOdomFactor);
     get_parameter("robot.vx_factor", config->vxFactor);
     get_parameter("robot.yaw_offset", config->yawOffset);
+    get_parameter("robot.joystick", config->joystick);
 
     get_parameter("rerunLog.enable", config->rerunLogEnable);
     get_parameter("rerunLog.server_addr", config->rerunLogServerAddr);
@@ -230,47 +233,49 @@ double Brain::msecsSince(rclcpp::Time time)
 
 void Brain::joystickCallback(const sensor_msgs::msg::Joy &msg)
 {
-    if (msg.buttons[BTN_LT] == 0 && msg.buttons[BTN_RT] == 0 && msg.buttons[BTN_LB] == 0 && msg.buttons[BTN_RB] == 0)
+    JoyMsg joy(msg);
+
+    if (!joy.BTN_LT && !joy.BTN_RT && !joy.BTN_LB && !joy.BTN_RB)
     {
-        if (msg.buttons[BTN_B] == 1)
+        if (joy.BTN_B)
         {
             tree->setEntry<bool>("B_pressed", true);
             prtDebug("B is pressed");
         }
-        else if (msg.buttons[BTN_B] == 0)
+        else if (!joy.BTN_B && tree->getEntry<bool>("B_pressed"))
         {
             tree->setEntry<bool>("B_pressed", false);
             prtDebug("B is released");
         }
     }
-    else if (msg.buttons[BTN_LT] == 1)
+    else if (joy.BTN_LT && !joy.BTN_RT && !joy.BTN_LB && !joy.BTN_RB)
     {
-        if (msg.axes[AX_DX] || msg.axes[AX_DY])
+        if (joy.AX_DX || joy.AX_DY)
         {
-            config->vxFactor += 0.01 * msg.axes[AX_DX];
-            config->yawOffset += 0.01 * msg.axes[AX_DY];
+            config->vxFactor += 0.01 * joy.AX_DX;
+            config->yawOffset += 0.01 * joy.AX_DY;
             prtDebug(format("vxFactor = %.2f  yawOffset = %.2f", config->vxFactor, config->yawOffset));
         }
 
-        if (msg.buttons[BTN_X] == 1)
+        if (joy.BTN_X)
         {
             tree->setEntry<int>("control_state", 1);
             client->setVelocity(0., 0., 0.);
             client->moveHead(0., 0.);
             prtDebug("State => 1: CANCEL");
         }
-        else if (msg.buttons[BTN_A] == 1)
+        else if (joy.BTN_A)
         {
             tree->setEntry<int>("control_state", 2);
             tree->setEntry<bool>("odom_calibrated", false);
             prtDebug("State => 2: RECALIBRATE");
         }
-        else if (msg.buttons[BTN_B] == 1)
+        else if (joy.BTN_B)
         {
             tree->setEntry<int>("control_state", 3);
             prtDebug("State => 3: ACTION");
         }
-        else if (msg.buttons[BTN_Y] == 1)
+        else if (joy.BTN_Y)
         {
             string curRole = tree->getEntry<string>("player_role");
             curRole == "striker" ? tree->setEntry<string>("player_role", "goal_keeper") : tree->setEntry<string>("player_role", "striker");
