@@ -15,12 +15,16 @@
 #include "booster_interface/msg/odometer.hpp"
 #include "booster_interface/msg/low_state.hpp"
 
+#include "RoboCupGameControlData.h"
+#include "team_communication_msg.h"
+
 #include "brain_config.h"
 #include "brain_data.h"
 #include "brain_log.h"
 #include "brain_tree.h"
 #include "locator.h"
 #include "robot_client.h"
+#include "brain_communication.h"
 
 using namespace std;
 
@@ -42,6 +46,8 @@ public:
     std::shared_ptr<Locator> locator;
     // The BrainTree object, which contains the operations related to the BehaviorTree.
     std::shared_ptr<BrainTree> tree;
+    // The BrainCommunication object, which contains the operations related to communication each other and to GameController.
+    std::shared_ptr<BrainCommunication> communication;
 
     Brain();
 

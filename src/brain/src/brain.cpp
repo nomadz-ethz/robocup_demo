@@ -29,6 +29,8 @@ Brain::Brain() : rclcpp::Node("brain_node")
     declare_parameter<string>("rerunLog.server_addr", "");
     declare_parameter<int>("rerunLog.img_interval", 10);
 
+    declare_parameter<bool>("enable_com", true);
+
     // The tree_file_path is configured in launch.py and not placed in config.yaml.
     declare_parameter<string>("tree_file_path", "");
 }
@@ -45,6 +47,7 @@ void Brain::init()
     log = std::make_shared<BrainLog>(this);
     tree = std::make_shared<BrainTree>(this);
     client = std::make_shared<RobotClient>(this);
+    communication = std::make_shared<BrainCommunication>(this);
 
     locator->init(config->fieldDimensions, 4, 0.5);
 
@@ -53,6 +56,8 @@ void Brain::init()
     client->init();
 
     log->prepare();
+
+    communication->initUDPBroadcast();
 
     data->lastSuccessfulLocalizeTime = get_clock()->now();
 
