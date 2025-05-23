@@ -14,6 +14,7 @@
 
 #include "booster_interface/msg/odometer.hpp"
 #include "booster_interface/msg/low_state.hpp"
+#include "booster_interface/msg/raw_bytes_msg.hpp"
 
 #include "RoboCupGameControlData.h"
 #include "team_communication_msg.h"
@@ -88,6 +89,8 @@ private:
     vector<GameObject> getGameObjects(const vision_interface::msg::Detections &msg);
     void detectProcessBalls(const vector<GameObject> &ballObjs);
     void detectProcessMarkings(const vector<GameObject> &markingObjs);
+    // 处理跌到爬起状态信息
+    void recoveryStateCallback(const booster_interface::msg::RawBytesMsg &msg);
 
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joySubscription;
     rclcpp::Subscription<game_controller_interface::msg::GameControlData>::SharedPtr gameControlSubscription;
@@ -96,4 +99,6 @@ private:
     rclcpp::Subscription<booster_interface::msg::LowState>::SharedPtr lowStateSubscription;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr imageSubscription;
     rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr headPoseSubscription;
+    rclcpp::Subscription<booster_interface::msg::RawBytesMsg>::SharedPtr recoveryStateSubscription;
+
 };
