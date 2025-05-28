@@ -4,6 +4,8 @@
 #include "booster_vision/model//trt/postprocess.h"
 #include "booster_vision/model//trt/utils.h" //
 
+#if (NV_TENSORRT_MAJOR == 8) && (NV_TENSORRT_MINOR == 6)
+
 using namespace nvinfer1;
 const int kOutputSize = kMaxNumOutputBbox * sizeof(Detection) / sizeof(float) + 1;
 
@@ -163,3 +165,9 @@ int main(int argc, char** argv) {
 
     return 0;
 }
+#elif (NV_TENSORRT_MAJOR == 10) && (NV_TENSORRT_MINOR == 3)
+int main(int argc, char** argv) {
+	std::cout << "hello world!" << std::endl;
+}
+
+#endif

@@ -1,3 +1,7 @@
+#include <NvInferVersion.h>
+
+#if (NV_TENSORRT_MAJOR == 8) && (NV_TENSORRT_MINOR == 6)
+
 #include <algorithm>
 #include <iostream>  // Include this header for printing
 #include "booster_vision/model//trt/postprocess.h"
@@ -505,3 +509,5 @@ void draw_bbox_obb(std::vector<cv::Mat>& img_batch, std::vector<std::vector<Dete
         }
     }
 }
+
+#endif

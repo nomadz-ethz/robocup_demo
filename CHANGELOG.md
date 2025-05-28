@@ -1,4 +1,6 @@
 # Change Log
+## 2025.07.08
+1. Support jetpack 6.2, add model for jetpack 6.2
 ## 2025.07.04
 1. Add backward-ros for more convenient debugging
 ## 2025.05.30

@@ -13,7 +13,25 @@ The Booster T1 Robocup official demo allows the robot to make autonomous decisio
 sudo apt-get install ros-humble-backward-ros
 
 ## Build and Run
+
+### Note    
+This repo support both jetpack 6.0 and 6.2. If the repo is deployed on jetpack 6.2 machine, please modify src/vision/config/vision.yaml to selelct correct trt model
+
+vision.yaml for jetpack 6.0 machine
+``` yaml
+detection_model:
+  model_path: "./src/vision/model/best_orin.engine"
+  confidence_threshold: 0.2
 ```
+vision.yaml for jetpack 6.2 machine
+```yaml
+detection_model:
+  model_path: ""./src/vision/model/best_orin_10.3.engine"
+  confidence_threshold: 0.2
+```
+
+To decide jetpack version, please execute `dpkg -l | grep jetpack` on host.
+
 # Build the programs
 ./scripts/build.sh
 

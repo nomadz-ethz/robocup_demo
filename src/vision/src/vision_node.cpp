@@ -40,6 +40,7 @@ void VisionNode::Init(const std::string &cfg_template_path, const std::string &c
         std::cerr << "no camera param found here" << std::endl;
         return;
     } else {
+        camera_type_ = node["camera"]["type"].as<std::string>();
         intr_ = Intrinsics(node["camera"]["intrin"]);
         p_eye2head_ = as_or<Pose>(node["camera"]["extrin"], Pose());
 
@@ -55,6 +56,10 @@ void VisionNode::Init(const std::string &cfg_template_path, const std::string &c
         return;
     } else {
         detector_ = YoloV8Detector::CreateYoloV8Detector(node["detection_model"]);
+        if (detector_ == nullptr) {
+            std::cerr << "failed to create detector." << std::endl;
+            return;
+        }
     }
 
     // init data_syncer
@@ -77,8 +82,17 @@ void VisionNode::Init(const std::string &cfg_template_path, const std::string &c
     }
 
     // init ros related
-    std::string color_topic = "/camera/camera/color/image_raw";
-    std::string depth_topic = "/camera/camera/aligned_depth_to_color/image_raw";
+    std::cout << "current camera_type : " << camera_type_ << std::endl;
+    std::string color_topic;
+    std::string depth_topic;
+    if (camera_type_ == "zed") {
+        color_topic = "/zed/zed_node/left/image_rect_color";
+        depth_topic = "/zed/zed_node/depth/depth_registered";
+    } else {
+        // realsense
+        color_topic = "/camera/camera/color/image_raw";
+        depth_topic = "/camera/camera/aligned_depth_to_color/image_raw";
+    }
 
     it_ = std::make_shared<image_transport::ImageTransport>(shared_from_this());
     color_sub_ = it_->subscribe(color_topic, 1, std::bind(&VisionNode::ColorCallback, this, std::placeholders::_1));

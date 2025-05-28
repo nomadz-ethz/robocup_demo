@@ -58,6 +58,7 @@ private:
 
     std::string input_cfg_path_;
     std::string log_path_;
+    std::string camera_type_;
 
     YAML::Node cfg_node_;
 
@@ -107,7 +108,7 @@ void CalibrationNode::Init(const std::string cfg_path, bool is_offline, std::str
         intr_ = Intrinsics(cfg_node_["camera"]["intrin"]);
         p_eye2head_ = as_or<Pose>(cfg_node_["camera"]["extrin"], Pose());
     }
-    std::cout << "intrinsics: " << intr_ << std::endl;
+    std::cout << "intrinsics from yaml\n: " << intr_ << std::endl;
 
     calibration_mode_ = calibration_mode;
 
@@ -118,15 +119,26 @@ void CalibrationNode::Init(const std::string cfg_path, bool is_offline, std::str
     auto sub_opt_2 = rclcpp::SubscriptionOptions();
     sub_opt_2.callback_group = callback_group_sub_2;
 
+    std::string color_topic;
+    std::string intrin_topic;
+    if (camera_type_ == "zed") {
+        color_topic = "/zed/zed_node/left/image_rect_color";
+        intrin_topic = "/zed/zed_node/left/camera_info";
+    } else {
+        // realsense
+        color_topic = "/camera/camera/color/image_raw";
+        intrin_topic = "/camera/camera/color/camera_info";
+    }
+
     it_ = std::make_shared<image_transport::ImageTransport>(shared_from_this());
-    color_sub_ = it_->subscribe("/camera/camera/color/image_raw", 1, &CalibrationNode::ColorCallback, this, nullptr, sub_opt_1);
+    color_sub_ = it_->subscribe(color_topic, 1, &CalibrationNode::ColorCallback, this, nullptr, sub_opt_1);
     pose_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
         "/head_pose", 10,
         std::bind(&CalibrationNode::PoseCallback, this, std::placeholders::_1), sub_opt_2);
     is_offline_ = is_offline;
     if (!is_offline_) {
         camera_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-            "/camera/camera/color/camera_info", 10,
+            intrin_topic, 10,
             std::bind(&CalibrationNode::CameraInfoCallback, this, std::placeholders::_1));
     }
 
@@ -437,6 +449,7 @@ void CalibrationNode::CameraInfoCallback(const sensor_msgs::msg::CameraInfo::Sha
         camera_info_sub_.reset();
         std::cout << "disable camera info callback" << std::endl;
         // update board_detector
+        std::cout << "updated camera intrinsics: \n" << intr_ << std::endl;
         board_detector_ = std::make_shared<BoardDetector>(cv::Size(board_w_, board_h_), board_square_size_, intr_);
     }
 }

@@ -38,6 +38,7 @@ public:
 private:
     bool use_depth_ = false;
     bool show_res_ = false;
+    std::string camera_type_;
 
     Intrinsics intr_;
     Pose p_eye2head_;
