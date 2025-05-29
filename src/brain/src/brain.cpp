@@ -4,7 +4,6 @@
 #include "brain.h"
 #include "utils/print.h"
 #include "utils/math.h"
-#include "joy_msg.h"
 
 using namespace std;
 using std::placeholders::_1;
@@ -23,7 +22,6 @@ Brain::Brain() : rclcpp::Node("brain_node")
     declare_parameter<double>("robot.odom_factor", 1.0);
     declare_parameter<double>("robot.vx_factor", 0.95);
     declare_parameter<double>("robot.yaw_offset", 0.1);
-    declare_parameter<string>("robot.joystick", "");
 
     declare_parameter<bool>("rerunLog.enable", false);
     declare_parameter<string>("rerunLog.server_addr", "");
@@ -61,7 +59,7 @@ void Brain::init()
 
     data->lastSuccessfulLocalizeTime = get_clock()->now();
 
-    joySubscription = create_subscription<sensor_msgs::msg::Joy>("/joy", 10, bind(&Brain::joystickCallback, this, _1));
+    joySubscription = create_subscription<booster_interface::msg::RemoteControllerState>("/remote_controller_state", 10, bind(&Brain::joystickCallback, this, _1));
     gameControlSubscription = create_subscription<game_controller_interface::msg::GameControlData>("/robocup/game_controller", 1, bind(&Brain::gameControlCallback, this, _1));
     detectionsSubscription = create_subscription<vision_interface::msg::Detections>("/booster_vision/detection", 1, bind(&Brain::detectionsCallback, this, _1));
     odometerSubscription = create_subscription<booster_interface::msg::Odometer>("/odometer_state", 1, bind(&Brain::odometerCallback, this, _1));
@@ -84,7 +82,6 @@ void Brain::loadConfig()
     get_parameter("robot.odom_factor", config->robotOdomFactor);
     get_parameter("robot.vx_factor", config->vxFactor);
     get_parameter("robot.yaw_offset", config->yawOffset);
-    get_parameter("robot.joystick", config->joystick);
 
     get_parameter("rerunLog.enable", config->rerunLogEnable);
     get_parameter("rerunLog.server_addr", config->rerunLogServerAddr);
@@ -238,51 +235,60 @@ double Brain::msecsSince(rclcpp::Time time)
     return (this->get_clock()->now() - time).nanoseconds() / 1e6;
 }
 
-void Brain::joystickCallback(const sensor_msgs::msg::Joy &msg)
+void Brain::joystickCallback(const booster_interface::msg::RemoteControllerState &joy)
 {
-    JoyMsg joy(msg);
+    prtDebug("joy!!");
 
-    if (!joy.BTN_LT && !joy.BTN_RT && !joy.BTN_LB && !joy.BTN_RB)
+    if (!joy.lt && !joy.rt && !joy.lb && !joy.rb)
     {
-        if (joy.BTN_B)
+        if (joy.b)
         {
             tree->setEntry<bool>("B_pressed", true);
             prtDebug("B is pressed");
         }
-        else if (!joy.BTN_B && tree->getEntry<bool>("B_pressed"))
+        else if (!joy.b && tree->getEntry<bool>("B_pressed"))
         {
             tree->setEntry<bool>("B_pressed", false);
             prtDebug("B is released");
         }
     }
-    else if (joy.BTN_LT && !joy.BTN_RT && !joy.BTN_LB && !joy.BTN_RB)
+    else if (joy.lt && !joy.rt && !joy.lb && !joy.rb)
     {
-        if (joy.AX_DX || joy.AX_DY)
+        if (joy.hat_u || joy.hat_d)
         {
-            config->vxFactor += 0.01 * joy.AX_DX;
-            config->yawOffset += 0.01 * joy.AX_DY;
-            prtDebug(format("vxFactor = %.2f  yawOffset = %.2f", config->vxFactor, config->yawOffset));
+            config->vxFactor += 0.01 * (joy.hat_u ? 1.0 : -1.0);
+            prtDebug(
+                format("vxFactor = %.2f  yawOffset = %.2f", config->vxFactor, config->yawOffset)
+            );
         }
 
-        if (joy.BTN_X)
+        if (joy.hat_l || joy.hat_r)
+        {
+            config->yawOffset += 0.01 * (joy.hat_r ? 1.0 : -1.0);
+            prtDebug(
+                format("vxFactor = %.2f  yawOffset = %.2f", config->vxFactor, config->yawOffset)
+            );
+        }
+
+        if (joy.x)
         {
             tree->setEntry<int>("control_state", 1);
             client->setVelocity(0., 0., 0.);
             client->moveHead(0., 0.);
             prtDebug("State => 1: CANCEL");
         }
-        else if (joy.BTN_A)
+        else if (joy.a)
         {
             tree->setEntry<int>("control_state", 2);
             tree->setEntry<bool>("odom_calibrated", false);
             prtDebug("State => 2: RECALIBRATE");
         }
-        else if (joy.BTN_B)
+        else if (joy.b)
         {
             tree->setEntry<int>("control_state", 3);
             prtDebug("State => 3: ACTION");
         }
-        else if (joy.BTN_Y)
+        else if (joy.y)
         {
             string curRole = tree->getEntry<string>("player_role");
             curRole == "striker" ? tree->setEntry<string>("player_role", "goal_keeper") : tree->setEntry<string>("player_role", "striker");

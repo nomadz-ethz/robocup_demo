@@ -5,7 +5,6 @@
 #include <rerun.hpp>
 #include <opencv2/opencv.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <sensor_msgs/msg/joy.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <vision_interface/msg/detections.hpp>
@@ -15,6 +14,7 @@
 #include "booster_interface/msg/odometer.hpp"
 #include "booster_interface/msg/low_state.hpp"
 #include "booster_interface/msg/raw_bytes_msg.hpp"
+#include "booster_interface/msg/remote_controller_state.hpp"
 
 #include "RoboCupGameControlData.h"
 #include "team_communication_msg.h"
@@ -79,7 +79,7 @@ private:
     void updateMemory();
 
     // ------------------------------------------------------ SUB CALLBACKS ------------------------------------------------------
-    void joystickCallback(const sensor_msgs::msg::Joy &msg);
+    void joystickCallback(const booster_interface::msg::RemoteControllerState &msg);
     void gameControlCallback(const game_controller_interface::msg::GameControlData &msg);
     void detectionsCallback(const vision_interface::msg::Detections &msg);
     void imageCallback(const sensor_msgs::msg::Image &msg);
@@ -92,7 +92,7 @@ private:
     // 处理跌到爬起状态信息
     void recoveryStateCallback(const booster_interface::msg::RawBytesMsg &msg);
 
-    rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joySubscription;
+    rclcpp::Subscription<booster_interface::msg::RemoteControllerState>::SharedPtr joySubscription;
     rclcpp::Subscription<game_controller_interface::msg::GameControlData>::SharedPtr gameControlSubscription;
     rclcpp::Subscription<vision_interface::msg::Detections>::SharedPtr detectionsSubscription;
     rclcpp::Subscription<booster_interface::msg::Odometer>::SharedPtr odometerSubscription;

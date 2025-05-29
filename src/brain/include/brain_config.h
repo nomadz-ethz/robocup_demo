@@ -37,7 +37,6 @@ public:
     double robotOdomFactor; // Corresponds to robot.odom_factor odom
     double vxFactor;        // Corresponds to robot.vx_factor fix the issue where the actual vx is larger than the command
     double yawOffset;       // Corresponds to robot.yaw_offset fix the issue of leftward bias during distance measurement
-    string joystick;        // Corresponds to robot.joystick "logicall" | "beitong"
 
     bool rerunLogEnable;       // Corresponds to rerunLog.enable  Whether to enable rerunLog
     string rerunLogServerAddr; // Corresponds to rerunLog.server_addr  rerunLog address
