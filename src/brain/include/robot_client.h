@@ -5,6 +5,8 @@
 #include <rerun.hpp>
 
 #include <booster_msgs/msg/rpc_req_msg.hpp>
+#include <booster_internal/robot/b1/b1_loco_internal_api.hpp>
+
 
 using namespace std;
 
@@ -70,6 +72,11 @@ public:
      * @brief 进阻尼
      */
     int enterDamping();
+
+    /**
+     * @brief 踢球
+     */
+    int kickBall(double kick_speed = 1.0, double kick_dir = 0.0);
 
 private:
     rclcpp::Publisher<booster_msgs::msg::RpcReqMsg>::SharedPtr publisher;
