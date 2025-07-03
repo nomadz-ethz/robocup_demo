@@ -68,8 +68,6 @@ void Brain::init()
     headPoseSubscription = create_subscription<geometry_msgs::msg::Pose>("/head_pose", 1, bind(&Brain::headPoseCallback, this, _1));
     recoveryStateSubscription = create_subscription<booster_interface::msg::RawBytesMsg>("fall_down_recovery_state", 1, bind(&Brain::recoveryStateCallback, this, _1));
 
-    // kick cmd need ball pos of real kick happening, so we publish it for the kick reference
-    publishKickReferenceMsg = create_publisher<brain::msg::Kick>("/kick_ball", 10);
 }
 
 void Brain::loadConfig()
@@ -107,7 +105,6 @@ void Brain::tick()
 {
     updateMemory();
     tree->tick();
-    pubKickReferenceMsg();
 }
 
 void Brain::updateMemory()
@@ -167,15 +164,6 @@ void Brain::updateBallMemory()
                  .with_colors({tree->getEntry<bool>("ball_location_known") ? 0xFFFFFFFF : 0xFF0000FF})
                  .with_radii({0.005})
                  .with_draw_order(30));
-}
-
-void Brain::pubKickReferenceMsg() {
-    brain::msg::Kick kickMsg;
-    kickMsg.header.stamp = get_clock()->now();
-    kickMsg.x = data->ball.posToRobot.x;
-    kickMsg.y = data->ball.posToRobot.y;
-    // 发布
-    publishKickReferenceMsg->publish(kickMsg);
 }
 
 vector<double> Brain::getGoalPostAngles(const double margin)

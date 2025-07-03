@@ -26,7 +26,6 @@
 #include "locator.h"
 #include "robot_client.h"
 #include "brain_communication.h"
-#include "brain/msg/kick.hpp"
 
 using namespace std;
 
@@ -79,9 +78,6 @@ private:
 
     void updateMemory();
 
-    // 内部调式使用，发布球的视觉位置，接入踢球动作
-    void pubKickReferenceMsg();
-
     // ------------------------------------------------------ SUB CALLBACKS ------------------------------------------------------
     void joystickCallback(const booster_interface::msg::RemoteControllerState &msg);
     void gameControlCallback(const game_controller_interface::msg::GameControlData &msg);
@@ -104,6 +100,5 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr imageSubscription;
     rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr headPoseSubscription;
     rclcpp::Subscription<booster_interface::msg::RawBytesMsg>::SharedPtr recoveryStateSubscription;
-    rclcpp::Publisher<brain::msg::Kick>::SharedPtr publishKickReferenceMsg;
 
 };

@@ -45,30 +45,6 @@ int RobotClient::enterDamping()
     return 0;
 }
 
-int RobotClient::kickBall(double kick_speed, double kick_dir)
-{
-    setVelocity(0.0, 0.0, 0.0, false, false, false); // stop the robot before kicking
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // wait for the stop command to take effect
-
-    auto _kick_speed = cap(kick_speed, 3.0, 1.0);
-    auto _kick_dir = cap(kick_dir, -0.5, 0.5);
-    booster_internal::robot::b1::RLKickBallParameter kick_param(_kick_speed, _kick_dir);
-    std::string param = kick_param.ToJson().dump();
-
-    std::string uuid = gen_uuid();
-    auto message = booster_msgs::msg::RpcReqMsg();
-    message.uuid = uuid;
-
-    nlohmann::json req_header;
-    req_header["api_id"] = static_cast<int64_t>(booster_internal::robot::b1::LocoInternalApiId::kRLKickBall);
-    message.header = req_header.dump();
-    message.body = param;
-
-    publisher->publish(message);
-
-    return 0;
-}
-
 int RobotClient::setVelocity(double x, double y, double theta, bool applyMinX, bool applyMinY, bool applyMinTheta)
 {
     brain->log->setTimeNow();

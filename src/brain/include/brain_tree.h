@@ -47,30 +47,6 @@ private:
     void initEntry();
 };
 
-class NewKick : public StatefulActionNode
-{
-public:
-    NewKick(const string &name, const NodeConfig &config, Brain *_brain) : StatefulActionNode(name, config), brain(_brain) {}
-
-    static PortsList providedPorts()
-    {
-        return {
-            InputPort<double>("msecs", 4000, "time of kick action in milliseconds, only if robot is not moving, kick will take effect, so we should not pub any velocity command during this time"),
-        };
-    }
-
-    NodeStatus onStart() override;
-
-    NodeStatus onRunning() override;
-
-    // callback to execute if the action was aborted by another node
-    void onHalted() override;
-
-private:
-    Brain *brain;
-    rclcpp::Time _startTime;
-};
-
 class StrikerDecide : public SyncActionNode
 {
 public:
