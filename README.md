@@ -9,6 +9,9 @@ The Booster T1 Robocup official demo allows the robot to make autonomous decisio
 - game_controller
     - Reads the game control data packets broadcast by the referee machine on the local area network, converts them into ROS2 topic messages, and makes them available for the brain to use.
 
+## Install extra dependency
+sudo apt-get install ros-humble-backward-ros
+
 ## Build and Run
 ```
 # Build the programs
