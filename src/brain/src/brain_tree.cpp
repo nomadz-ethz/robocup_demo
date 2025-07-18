@@ -42,9 +42,13 @@ void BrainTree::init()
     REGISTER_BUILDER(GoBackInField)
     REGISTER_BUILDER(TurnOnSpot)
 
+    // New condition Nodes
+    REGISTER_BUILDER(HasBallLock)
+    REGISTER_BUILDER(BallFree)
+
     // Action Nodes for debug
     REGISTER_BUILDER(PrintMsg)
-
+    
     factory.registerBehaviorTreeFromFile(brain->config->treeFilePath);
     tree = factory.createTree("MainTree");
 
@@ -81,6 +85,11 @@ void BrainTree::initEntry()
 
     setEntry<bool>("we_just_scored", false);
     setEntry<bool>("wait_for_opponent_kickoff", false);
+
+    // TODO
+    setEntry<bool>("has_ball_lock", false);
+    setEntry<bool>("is_any_robot_ball_locked", false); // how to make this global?
+    setEntry<bool>("ball_free", true);
 }
 
 void BrainTree::tick()
@@ -862,4 +871,53 @@ NodeStatus PrintMsg::tick()
     }
     std::cout << "[MSG] " << msg.value() << std::endl;
     return NodeStatus::SUCCESS;
+}
+
+// BIG TODO: verify this, where do these variables exist
+BT::NodeStatus HasBallLock::tick() {
+    auto _has_ball_lock = brain->tree->getEntry<bool>("has_ball_lock");
+    auto _is_any_locked = brain->tree->getEntry<bool>("is_any_robot_ball_locked");
+
+    if(brain->data->robotPoseToField.x - brain->data->ball.posToField.x <= 1.0) {
+        if (!_is_any_locked) {
+            brain->publishBallLockStatus(true); // only global one
+            brain->tree->setEntry<bool>("has_ball_lock", true);
+            return NodeStatus::SUCCESS;
+        }
+        else {
+            brain->publishBallLockStatus(true);
+            brain->tree->setEntry<bool>("has_ball_lock", false);
+            return BT::NodeStatus::SUCCESS;
+        }
+    }
+    else {
+        if (!_is_any_locked) {
+            brain->publishBallLockStatus(false); // only global one
+            brain->tree->setEntry<bool>("has_ball_lock", false);
+            return NodeStatus::SUCCESS;
+        }
+        else {
+            brain->publishBallLockStatus(true);
+            brain->tree->setEntry<bool>("has_ball_lock", false);
+            return BT::NodeStatus::SUCCESS;
+        }
+    }
+    
+    return NodeStatus::FAILURE;
+}
+
+BT::NodeStatus BallFree::tick() {
+    bool is_any_robot_ball_locked = brain->tree->getEntry<bool>("is_any_robot_ball_locked");
+    bool curr_ball_free = brain->tree->getEntry<bool>("ball_free");
+    
+    if (!is_any_robot_ball_locked) {
+        brain->tree->setEntry<bool>("ball_free", curr_ball_free && true);
+        return BT::NodeStatus::SUCCESS;
+    }
+    else {
+        brain->tree->setEntry<bool>("ball_free", false);
+        return BT::NodeStatus::SUCCESS;
+    }
+    
+    return BT::NodeStatus::FAILURE;
 }

@@ -334,6 +334,8 @@ void BrainCommunication::unicastCommunication() {
         msg.playerId = brain->config->playerId;
         // TODO: add something you want to send to teammates, this is only an example
         msg.testInfo = 1234567; 
+        // Add ball lock information
+        msg.has_ball_lock = brain->tree->getEntry<bool>("has_ball_lock");
 
         std::lock_guard<std::mutex> lock(_teammate_addresses_mutex);
         for (auto it = _teammate_addresses.begin(); it != _teammate_addresses.end(); ++it) {
@@ -421,15 +423,37 @@ void BrainCommunication::spinCommunicationReceiver() {
         }
 
         if (msg.playerId == brain->config->playerId) {  // ignore self messages
-            cout << CYAN_CODE <<  format(
+            cout << CYAN_CODE << format(
                 "communicationId: %d, playerId: %d, testInfo: %d",
                 msg.communicationId, msg.playerId, msg.testInfo)
                 << RESET_CODE << endl;
             continue;
-        } 
+        }
 
+        std::lock_guard<std::mutex> lock(_teammate_ball_locks_mutex);
+        _teammate_ball_locks[msg.playerId] = {
+            msg.has_ball_lock,
+            brain->get_clock()->now()
+        };
 
-        // TODO: dealing with the received message
+        // Update global ball lock status
+        bool any_robot_locked = false;
+        auto current_time = brain->get_clock()->now();
+
+        // Clean up old statuses and check if any robot has lock
+        for (auto it = _teammate_ball_locks.begin(); it != _teammate_ball_locks.end();) {
+            if ((current_time - it->second.timestamp).seconds() > 1.0) {
+                it = _teammate_ball_locks.erase(it);
+            } 
+            else {
+                if (it->second.has_ball_lock) {
+                    any_robot_locked = true;
+                }
+                ++it;
+            }
+        }
+
+        brain->tree->setEntry<bool>("is_any_robot_ball_locked", any_robot_locked);
     }
 }
 

@@ -12,6 +12,7 @@ struct TeamCommunicationMsg
     int playerId;
     // TODO: You need to add something you want to send to teammates
     int testInfo;
+    bool has_ball_lock;
 };
 
 struct TeamDiscoveryMsg
