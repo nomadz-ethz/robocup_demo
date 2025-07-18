@@ -99,4 +99,12 @@ private:
     std::thread _communication_recv_thread;
     int _communication_recv_socket = -1;
     int _communication_recv_port = 0;
+    
+    struct BallLockStatus {
+        bool has_ball_lock;
+        rclcpp::Time timestamp;
+    };
+
+    std::map<int, BallLockStatus> _teammate_ball_locks;
+    std::mutex _teammate_ball_locks_mutex;
 };

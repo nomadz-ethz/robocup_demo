@@ -483,3 +483,27 @@ public:
 private:
     Brain *brain;
 };
+
+
+// ------------------------------- FOR NOMADZ -------------------------------
+class HasBallLock : public BT::ConditionNode {
+public:
+    HasBallLock(const std::string& name, const BT::NodeConfiguration& config, Brain* _brain)
+        : ConditionNode(name, config), brain(_brain) {}
+
+    NodeStatus tick() override;
+
+private:
+    Brain* brain;
+};
+
+class BallFree : public ConditionNode {
+public:
+    BallFree(const std::string& name, const NodeConfiguration& config, Brain* _brain)
+        : ConditionNode(name, config), brain(_brain) {}
+
+    NodeStatus tick() override;
+
+private:
+    Brain* brain;
+};
