@@ -35,7 +35,7 @@ To decide jetpack version, please execute `dpkg -l | grep jetpack` on host.
 # Build the programs
 ./scripts/build.sh
 
-# Run in the simultion environment
+# Run in the simulation environment
 ./scripts/sim_start.sh
 
 # Run on the actual robot
