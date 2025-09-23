@@ -31,7 +31,7 @@ detection_model:
 ```
 
 To decide jetpack version, please execute `dpkg -l | grep jetpack` on host.
-
+```
 # Build the programs
 ./scripts/build.sh
 
