@@ -7,9 +7,13 @@ from launch_ros.substitutions import FindPackageShare
 
 def handle_configuration(context, *args, **kwargs):
     
-    config_path = PathJoinSubstitution([FindPackageShare('vision'), 'config']).perform(context);
-    config_file = PathJoinSubstitution([config_path, 'vision.yaml']).perform(context);
-    config_local_file = PathJoinSubstitution([config_path, 'vision_local.yaml']).perform(context);
+    user_cfg_dir = LaunchConfiguration('vision_config_path').perform(context)
+    if user_cfg_dir and user_cfg_dir.strip():
+        config_path = user_cfg_dir.rstrip('/') 
+    else:
+        config_path = PathJoinSubstitution([FindPackageShare('vision'), 'config']).perform(context)
+    config_file = os.path.join(config_path, 'vision.yaml')
+    config_local_file = os.path.join(config_path, 'vision_local.yaml')
 
     show_det = LaunchConfiguration('show_det')
     show_seg = LaunchConfiguration('show_seg')
@@ -44,6 +48,11 @@ def handle_configuration(context, *args, **kwargs):
 
 def generate_launch_description():
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'vision_config_path',
+            default_value='',
+            description='Optional directory containing vision.yaml & vision_local.yaml (empty => use package default)'
+        ),
         DeclareLaunchArgument(
             "offline_mode",
             default_value='false',

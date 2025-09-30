@@ -379,8 +379,43 @@ void CalibrationNode::RunExtrinsicCalibrationProcess(const SyncedDataBlock &data
             } else {
                 std::cout << "not overwrite input config" << std::endl;
             }
+            
+            // New: ask to save to system directory
+            std::cout << "save calibration result to /opt/booster/vision.yaml? y/n" << std::endl;
+            char key_sys;
+            std::cin >> key_sys;
+            if (key_sys == 'y') {
+                try {
+                    std::filesystem::create_directories("/opt/booster");
+                } catch (const std::exception &e) {
+                    std::cerr << "failed to ensure /opt/booster exists: " << e.what() << std::endl;
+                }
+                std::ofstream sys_cfg("/opt/booster/vision.yaml");
+                if (!sys_cfg) {
+                    std::cerr << "failed to open /opt/booster/vision.yaml for writing (permission required?)" << std::endl;
+                    // fallback: write to /tmp and print next-step command
+                    std::ostringstream oss;
+                    oss << new_cfg_node;
+                    std::string tmp_path = "/tmp/vision.yaml";
+                    {
+                        std::ofstream tmp_out(tmp_path);
+                        if (tmp_out) {
+                            tmp_out << oss.str();
+                            std::cout << "[fallback] 已写入临时文件: " << tmp_path << std::endl;
+                        } else {
+                            std::cerr << "[fallback] 也无法写入临时文件 " << tmp_path << std::endl;
+                        }
+                    }
+                } else {
+                    sys_cfg << new_cfg_node;
+                    std::cout << "saved to /opt/booster/vision.yaml" << std::endl;
+                }
+            }
         }
         std::cout << "finish extrinsics calibration process" << std::endl;
+        std::cout << "auto exit after calibration" << std::endl;
+        rclcpp::shutdown();
+        exit(0);
         break;
     }
     case 'r': {
@@ -565,6 +600,39 @@ void CalibrationNode::RunExtrinsicOffsetCalibrationProcess(const SyncedDataBlock
 
         data_logger_->LogYAML(new_cfg_node, results_name);
 
+        // New: ask to save to system directory (offset mode)
+        if (!is_offline_) {
+            std::cout << "save calibration result to /opt/booster/vision.yaml? y/n" << std::endl;
+            char key_sys;
+            std::cin >> key_sys;
+            if (key_sys == 'y') {
+                try {
+                    std::filesystem::create_directories("/opt/booster");
+                } catch (const std::exception &e) {
+                    std::cerr << "failed to ensure /opt/booster exists: " << e.what() << std::endl;
+                }
+                std::ofstream sys_cfg("/opt/booster/vision.yaml");
+                if (!sys_cfg) {
+                    std::cerr << "failed to open /opt/booster/vision.yaml for writing (permission required?)" << std::endl;
+                    // fallback: write to /tmp and print next-step command
+                    std::ostringstream oss;
+                    oss << new_cfg_node;
+                    std::string tmp_path = "/tmp/vision.yaml";
+                    {
+                        std::ofstream tmp_out(tmp_path);
+                        if (tmp_out) {
+                            tmp_out << oss.str();
+                            std::cout << "[fallback] 已写入临时文件: " << tmp_path << std::endl;
+                        } else {
+                            std::cerr << "[fallback] 也无法写入临时文件 " << tmp_path << std::endl;
+                        }
+                    }
+                } else {
+                    sys_cfg << new_cfg_node;
+                    std::cout << "saved to /opt/booster/vision.yaml" << std::endl;
+                }
+            }
+        }
         // // save points
         // std::vector<cv::Point3f> computed_points;
         // for (size_t i = 0; i < computed_rays.size(); i++) {
@@ -590,6 +658,9 @@ void CalibrationNode::RunExtrinsicOffsetCalibrationProcess(const SyncedDataBlock
         // data_logger_->LogYAML(optimization_res, optimization_res_path);
 
         std::cout << "finish extrinsics offset calibration process" << std::endl;
+        std::cout << "auto exit after calibration" << std::endl;
+        rclcpp::shutdown();
+        exit(0);
         break;
     }
     case 'r': {

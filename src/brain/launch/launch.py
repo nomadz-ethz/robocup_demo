@@ -9,9 +9,10 @@ from launch.substitutions import LaunchConfiguration
 
 
 def handle_configuration(context, *args, **kwargs):
-    vision_config_path = os.path.join(os.path.dirname(__file__), '../../../../vision/share/vision/config')
-    vision_config_file = os.path.join(vision_config_path, 'vision.yaml')
-    vision_config_local_file = os.path.join(vision_config_path, 'vision_local.yaml')
+    # 通过 launch 参数 vision_config_path 获取目录（可覆盖）
+    vision_config_dir = context.perform_substitution(LaunchConfiguration('vision_config_path'))
+    vision_config_file = os.path.join(vision_config_dir, 'vision.yaml')
+    vision_config_local_file = os.path.join(vision_config_dir, 'vision_local.yaml')
 
     config_path = os.path.join(os.path.dirname(__file__), '../config')
     config_file = os.path.join(config_path, 'config.yaml') 
@@ -66,6 +67,11 @@ def handle_configuration(context, *args, **kwargs):
 
 def generate_launch_description():
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'vision_config_path',
+            default_value=os.path.join(os.path.dirname(__file__), '../../../../vision/share/vision/config'),
+            description='Directory containing vision.yaml and vision_local.yaml'
+        ),
         # 需要可以通过 ros2 launch brain launch.py param:=value 形式提供的参数, 需要在这里用 DeclarelaunchArgument 声明, 然后在 handle_configuration 处理
         DeclareLaunchArgument(
             'tree', 
