@@ -6,12 +6,16 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 def handle_configuration(context, *args, **kwargs):
-    
+    default_config_path = PathJoinSubstitution([FindPackageShare('vision'), 'config']).perform(context)
+
     user_cfg_dir = LaunchConfiguration('vision_config_path').perform(context)
+    config_path = default_config_path  
     if user_cfg_dir and user_cfg_dir.strip():
-        config_path = user_cfg_dir.rstrip('/') 
-    else:
-        config_path = PathJoinSubstitution([FindPackageShare('vision'), 'config']).perform(context)
+        cand = user_cfg_dir.rstrip('/')
+        if os.path.exists(os.path.join(cand, 'vision.yaml')):
+            config_path = cand
+        else:
+            print(f"[vision launch] warning: {cand}/vision.yaml not found, fallback to {default_config_path}")
     config_file = os.path.join(config_path, 'vision.yaml')
     config_local_file = os.path.join(config_path, 'vision_local.yaml')
 
